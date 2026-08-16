@@ -40,7 +40,8 @@ const feed     = $('#feed'),
 
 const sheetEl=$('#sheet'), scrimEl=$('#scrim'), sheetBody=$('#sheetBody'),
       sheetTitle=$('#sheetTitle'), sheetBack=$('#sheetBack'),
-      sheetAction=$('#sheetAction'), sheetFoot=$('#sheetFoot');
+      sheetAction=$('#sheetAction'), sheetFoot=$('#sheetFoot'),
+      sheetCard=$('#sheetCard'), sheetHead=$('#sheetHead');
 
 // HTML escaping
 const esc=s=>String(s).replace(/[<>&\"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
@@ -72,14 +73,16 @@ const NET_ERR='Reddit is temporarily blocking requests from your network. Wait a
 const LS='subscroll.v6', LS_OLD='subscroll.v5';
 const FAV='__fav', TMP='__tmp';
 
-// Group icons & sort options
-const ICONS=['★','✦','◆','●','▲','♥','⚡','☾','✿','☀','⬢','⌘','✈','☕','⛰','♪'];
+// Group icons (names resolved by icons.js) & sort options
+const ICONS=['star','sparkle','diamond','circle','triangle','heart','bolt','moon',
+             'leaf','sun','hexagon','grid','plane','coffee','mountain','music',
+             'camera','globe','book','flame'];
 const SORTS=[['hot','Hot'],['new','New'],['top','Top'],['rising','Rising'],['controversial','Contro.']];
 const TIMES=[['hour','Hour'],['day','Day'],['week','Week'],['month','Month'],['year','Year'],['all','All time']];
 
 // Group helpers
 const uid=()=>'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const mkGroup=(o={})=>({id:o.id||uid(),name:o.name||'Untitled',icon:o.icon||'◆',
+const mkGroup=(o={})=>({id:o.id||uid(),name:o.name||'Untitled',icon:iconName(o.icon),
   subs:Array.isArray(o.subs)?o.subs.slice(0,CFG.MAX_SUBS):[],
   sort:o.sort||'hot', time:o.time||'all'});
 
@@ -100,12 +103,15 @@ function el(tag,cls,txt){
   if(txt!=null) n.textContent=txt;
   return n;
 }
-function label(box,text,actionLabel,actionRun){
+function label(box,text,actionLabel,actionRun,actionIcon){
   const l=el('div','slab');
   l.appendChild(el('span',null,text));
   l.appendChild(el('span','sp'));
   if(actionLabel){
-    const b=el('button',null,actionLabel);
+    const b=el('button');
+    b.type='button';
+    if(actionIcon) b.appendChild(iconEl(actionIcon));
+    b.appendChild(el('span',null,actionLabel));
     b.onclick=e=>{ e.stopPropagation(); actionRun(); };
     l.appendChild(b);
   }
@@ -117,6 +123,25 @@ function emptyNote(box,title,body){
   d.appendChild(document.createTextNode(body));
   box.appendChild(d);
 }
+
+// ── Keyboard inset ───────────────────────────────────────────────────────
+// The on-screen keyboard shrinks the visual viewport but not the layout
+// viewport, so anchored surfaces (gate, sheet) must be told how much of the
+// bottom is covered. One --kb variable drives every affected surface.
+(function(){
+  const vv=window.visualViewport;
+  if(!vv) return;
+  let raf=0;
+  const apply=()=>{
+    raf=0;
+    const gap=Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', (gap>60?gap:0)+'px');
+  };
+  const queue=()=>{ if(!raf) raf=requestAnimationFrame(apply); };
+  vv.addEventListener('resize',queue);
+  vv.addEventListener('scroll',queue);
+  apply();
+})();
 
 // Media regex & helpers
 const IMG_RE=/\.(jpe?g|png|webp|gif|bmp|avif)(\?|#|$)/i;

@@ -5,7 +5,7 @@ This repository is configured for the existing Cloudflare **Worker service named
 The Worker uses ES-module syntax and Workers Static Assets:
 
 - `src/worker.js` exports the module Worker and handles `/api/*`;
-- `public/` contains the static site;
+- `public/` contains the static site (`public/js/icons.js` holds the inline SVG icon set, `public/style.css` the single design-token sheet);
 - `wrangler.jsonc` deploys both parts and binds D1 as `SUBSCROLL_DB`;
 - `migrations/0001_accounts.sql` creates the only required table.
 
@@ -112,7 +112,7 @@ After these files are committed, this is a suitable instruction for Cloudflare's
 ## Verify after deployment
 
 1. Open the normal SubScroll URL. The password screen should appear.
-2. Enter a password of at least 8 characters.
+2. Enter a password of at least 4 characters.
 3. Open `/api/session` on the same hostname; it should return `{"authenticated":true}` while signed in.
 4. Change a group or setting, reload, and confirm it remains.
 5. Sign in with the same password in another browser and confirm the same state loads.

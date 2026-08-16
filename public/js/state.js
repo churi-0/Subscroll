@@ -13,7 +13,7 @@
 const S={
   groups : [],
   activeId: FAV,
-  tmp    : mkGroup({id:TMP,name:'Search',icon:'⌕'}),
+  tmp    : mkGroup({id:TMP,name:'Search',icon:'search'}),
   after  : null, end:false, loading:false,
   posts  : [], seen:new Set(),
   mediaOnly:true, blur:true, info:true, muted:true,
@@ -30,9 +30,9 @@ const isFav=name=>favGroup().subs.some(s=>s.toLowerCase()===String(name).toLower
 function normalise(){
   S.groups=S.groups.filter(g=>g&&typeof g==='object').map(mkGroup);
   let i=S.groups.findIndex(g=>g.id===FAV);
-  if(i<0){ S.groups.unshift(mkGroup({id:FAV,name:'Favourites',icon:'★',subs:[]})); }
+  if(i<0){ S.groups.unshift(mkGroup({id:FAV,name:'Favourites',icon:'star',subs:[]})); }
   else if(i>0){ const [f]=S.groups.splice(i,1); S.groups.unshift(f); }
-  S.groups[0].id=FAV; S.groups[0].icon='★';
+  S.groups[0].id=FAV; S.groups[0].icon='star';
   if(!S.groups[0].name) S.groups[0].name='Favourites';
   if(S.activeId!==TMP&&!S.groups.some(g=>g.id===S.activeId)) S.activeId=FAV;
 }

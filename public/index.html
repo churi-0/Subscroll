@@ -27,7 +27,7 @@
 
 <div class="account-gate" id="accountGate" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
   <div class="account-card">
-    <div class="account-mark" aria-hidden="true"><i></i></div>
+    <div class="account-mark" aria-hidden="true"></div>
     <h1 id="accountTitle">SubScroll</h1>
     <p id="accountCopy">Opening your space…</p>
     <form id="loginForm" hidden>
@@ -37,27 +37,27 @@
           autocomplete="current-password" required autofocus placeholder="Enter your password">
         <button id="loginSubmit" type="submit">Continue</button>
       </div>
-      <small>First use creates a new space. There is no password recovery, and a typo opens a different space. Use a strong password manager-generated password.</small>
+      <small>First use creates a new space. There is no password recovery, and a typo opens a different space. Use a strong, generated password.</small>
     </form>
     <div class="account-status" id="accountStatus" role="status"></div>
     <button class="account-retry" id="accountRetry" type="button" hidden>Try again</button>
   </div>
 </div>
 
-<button class="tray-ch trayup" id="clearX" type="button" aria-label="Show post info">▴</button>
+<button class="tray-ch trayup" id="clearX" type="button" aria-label="Show post info"></button>
 
 <header id="hdr">
   <div class="bar">
-    <button class="feedpill" id="feedPill" aria-label="Switch feed">
-      <span class="fico" id="feedIco">★</span>
+    <button class="feedpill" id="feedPill" type="button" aria-label="Switch feed">
+      <span class="fico" id="feedIco"></span>
       <span class="fwrap">
         <span class="fname" id="feedName">Favourites</span>
         <span class="fmeta" id="feedMeta">—</span>
       </span>
-      <span class="fchev">▼</span>
+      <span class="fchev" id="feedChev"></span>
     </button>
-    <button class="ic" id="btnSearch" aria-label="Search subreddits">⌕</button>
-    <button class="ic" id="btnMore" aria-label="Settings">⋯</button>
+    <button class="ic" id="btnSearch" type="button" aria-label="Search subreddits"></button>
+    <button class="ic" id="btnMore" type="button" aria-label="Settings"></button>
   </div>
   <div class="sorts" id="sorts"></div>
 </header>
@@ -68,19 +68,22 @@
 <div class="scrim" id="scrim"></div>
 
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-  <div class="shandle" id="sheetHandle"><i></i></div>
-  <div class="shead">
-    <button class="back" id="sheetBack" hidden aria-label="Back">‹</button>
-    <h2 id="sheetTitle">Feeds</h2>
-    <button class="sbtn" id="sheetAction" hidden></button>
+  <div class="scard" id="sheetCard">
+    <div class="shandle" id="sheetHandle"><i></i></div>
+    <div class="shead" id="sheetHead">
+      <button class="back" id="sheetBack" type="button" hidden aria-label="Back"></button>
+      <h2 id="sheetTitle">Feeds</h2>
+      <button class="sbtn" id="sheetAction" type="button" hidden></button>
+    </div>
+    <div class="sbody" id="sheetBody"></div>
+    <div class="sfoot" id="sheetFoot" hidden></div>
   </div>
-  <div class="sbody" id="sheetBody"></div>
-  <div class="sfoot" id="sheetFoot" hidden></div>
 </section>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/config.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/account.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/state.js"></script>

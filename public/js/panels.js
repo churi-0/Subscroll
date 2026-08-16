@@ -15,20 +15,21 @@ const PANELS={};
 
 PANELS.feeds=()=>({
   title:'Feeds',
-  action:{label:'+ New',run:()=>newGroup()},
+  action:{label:'New',icon:'plus',run:()=>newGroup()},
   body(box){
     S.groups.forEach((g,i)=>{
       if(i===0) label(box,'Default');
       if(i===1) label(box,plural(S.groups.length-1,'group'));
       const row=el('button','row'+(g.id===S.activeId?' on':''));
       row.type='button';
-      const ico=el('span','rico',g.icon); row.appendChild(ico);
+      const ico=el('span','rico'); ico.appendChild(iconEl(iconName(g.icon)));
+      row.appendChild(ico);
       const mid=el('span','rmid');
       mid.appendChild(el('span','rname',g.name));
       mid.appendChild(el('span','rsub',
-        g.subs.length?g.subs.map(s=>'r/'+s).join('  ·  '):'Empty — tap the pencil to add subreddits'));
+        g.subs.length?g.subs.map(s=>'r/'+s).join('  ·  '):'Empty — tap edit to add subreddits'));
       row.appendChild(mid);
-      const ed=el('span','redit','✎');
+      const ed=el('span','redit'); ed.appendChild(iconEl('edit'));
       ed.setAttribute('role','button');
       ed.setAttribute('aria-label','Edit '+g.name);
       ed.onclick=e=>{ e.stopPropagation(); pushPanel('group',{id:g.id}); };
@@ -38,7 +39,7 @@ PANELS.feeds=()=>({
     });
     if(S.groups.length===1){
       emptyNote(box,'No groups yet',
-        'A group is a named set of subreddits that plays as one feed. Tap "+ New" to make one.');
+        'A group is a named set of subreddits that plays as one feed. Tap New to make one.');
     }
   }
 });
@@ -55,14 +56,14 @@ PANELS.group=({id})=>{
   const fav=g.id===FAV;
   return {
     title:fav?'Favourites':'Edit group',
-    action:{label:'Open',pri:true,run:()=>{ switchTo(g.id); closeSheet(); }},
+    action:{label:'Open',pri:true,icon:'play',run:()=>{ switchTo(g.id); closeSheet(); }},
     body(box){
       const wrap=el('div','fld');
       wrap.appendChild(el('span',null,'Name'));
-      const rowf=el('div');
-      rowf.style.cssText='display:flex;gap:8px';
-      const ib=el('button','ic',g.icon);
-      ib.style.cssText='width:46px;height:46px;font-size:19px;border-radius:14px';
+      const rowf=el('div','frow');
+      const ib=el('button','iconbtn');
+      ib.type='button';
+      ib.appendChild(iconEl(iconName(g.icon)));
       ib.setAttribute('aria-label','Change icon');
       ib.onclick=e=>{ e.stopPropagation(); pushPanel('icon',{id:g.id}); };
       const inp=el('input','inp');
@@ -73,24 +74,26 @@ PANELS.group=({id})=>{
       wrap.appendChild(rowf);
       box.appendChild(wrap);
 
-      label(box,plural(g.subs.length,'subreddit'),'+ Add',()=>pushPanel('search',{into:g.id}));
+      label(box,plural(g.subs.length,'subreddit'),'Add',()=>pushPanel('search',{into:g.id}),'plus');
       if(!g.subs.length){
-        emptyNote(box,'No subreddits yet','Tap "+ Add" to search Reddit and build this feed.');
+        emptyNote(box,'No subreddits yet','Tap Add to search Reddit and build this feed.');
       }
       g.subs.forEach((name,i)=>{
         const row=el('div','row');
-        row.appendChild(el('span','rico','r/'));
+        row.appendChild(el('span','rico txt','r/'));
         const mid=el('span','rmid');
         mid.appendChild(el('span','rname','r/'+name));
         row.appendChild(mid);
         const ord=el('span','rord');
-        const up=el('button',null,'▲'), dn=el('button',null,'▼');
+        const up=el('button'), dn=el('button');
+        up.type='button'; dn.type='button';
+        up.appendChild(iconEl('up')); dn.appendChild(iconEl('down'));
         up.disabled=i===0; dn.disabled=i===g.subs.length-1;
         up.setAttribute('aria-label','Move up'); dn.setAttribute('aria-label','Move down');
         up.onclick=e=>{ e.stopPropagation(); g.subs.splice(i-1,0,g.subs.splice(i,1)[0]); commit(g,false); };
         dn.onclick=e=>{ e.stopPropagation(); g.subs.splice(i+1,0,g.subs.splice(i,1)[0]); commit(g,false); };
         ord.append(up,dn); row.appendChild(ord);
-        const x=el('button','redit','✕');
+        const x=el('button','redit'); x.type='button'; x.appendChild(iconEl('close'));
         x.setAttribute('aria-label','Remove r/'+name);
         x.onclick=e=>{ e.stopPropagation(); g.subs.splice(i,1); commit(g); };
         row.appendChild(x);
@@ -117,17 +120,17 @@ PANELS.group=({id})=>{
       if(fav){
         const n=el('div','note');
         n.textContent='Favourites is your default feed — it loads on launch and can\'t be deleted. '+
-                      'Tap ☆ on any post to add that subreddit here.';
+                      'Tap the star on any post to add that subreddit here.';
         box.appendChild(n);
       }
     },
     foot: fav ? null : [
-      {label:'Duplicate',run(){
+      {label:'Duplicate',icon:'copy',run(){
         const copy=mkGroup({name:g.name+' copy',icon:g.icon,subs:g.subs.slice(),sort:g.sort,time:g.time});
         S.groups.push(copy); save();
         stack[stack.length-1].args={id:copy.id}; refresh(); toast('Duplicated');
       }},
-      {label:'Delete',danger:true,run(){
+      {label:'Delete',icon:'trash',danger:true,run(){
         if(!confirm('Delete "'+g.name+'"?')) return;
         const wasActive=S.activeId===g.id;
         S.groups=S.groups.filter(x=>x.id!==g.id);
@@ -144,13 +147,14 @@ PANELS.group=({id})=>{
 PANELS.icon=({id})=>({
   title:'Pick an icon',
   body(box){
-    const grid=el('div');
-    grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;padding:8px';
+    const grid=el('div','igrid');
     const g=S.groups.find(x=>x.id===id);
+    const cur=g?iconName(g.icon):'';
     ICONS.forEach(ic=>{
-      const b=el('button','ic',ic);
-      b.style.cssText='width:100%;height:58px;font-size:22px;border-radius:14px';
-      if(g&&g.icon===ic) b.style.cssText+=';border-color:var(--acc);color:var(--acc)';
+      const b=el('button',ic===cur?'on':null);
+      b.type='button';
+      b.setAttribute('aria-label',ic);
+      b.appendChild(iconEl(ic));
       b.onclick=e=>{ e.stopPropagation(); if(g){ g.icon=ic; save(); paintHeader(); } popPanel(); };
       grid.appendChild(b);
     });
@@ -188,7 +192,7 @@ PANELS.search=({into})=>{
           target.subs.forEach((n,i)=>{
             const c=el('span','chip');
             c.appendChild(el('span',null,'r/'+n));
-            const x=el('button',null,'✕');
+            const x=el('button'); x.type='button'; x.appendChild(iconEl('close'));
             x.onclick=e=>{ e.stopPropagation(); target.subs.splice(i,1);
               save(); paintChips(); paintHeader(); repaintStars();
               if(S.activeId===target.id) load(true); };
@@ -292,8 +296,7 @@ PANELS.settings=()=>({
     label(box,'API');
     const cw=el('div','fld');
     cw.appendChild(el('span',null,'Reddit client ID'));
-    const cr=el('div');
-    cr.style.cssText='display:flex;gap:8px';
+    const cr=el('div','frow');
     const ci=el('input','inp');
     ci.type='text'; ci.spellcheck=false; ci.autocomplete='off'; ci.autocapitalize='off';
     ci.placeholder='Paste your client ID\u2026';
@@ -310,18 +313,19 @@ PANELS.settings=()=>({
 
     label(box,'Account');
     const cloud=el('div','row');
-    cloud.appendChild(el('span','rico','☁'));
+    const cico=el('span','rico'); cico.appendChild(iconEl('cloud')); cloud.appendChild(cico);
     const cm=el('span','rmid');
     cm.appendChild(el('span','rname','Cloud sync active'));
-    cm.appendChild(el('span','rsub','Client ID, groups and preferences are saved in Cloudflare D1.'));
+    const csub=el('span','rsub wrap','Client ID, groups and preferences are saved in Cloudflare D1.');
+    cm.appendChild(csub);
     cloud.appendChild(cm);
     box.appendChild(cloud);
 
     const out=el('button','row'); out.type='button';
-    out.appendChild(el('span','rico','↪'));
+    const oico=el('span','rico'); oico.appendChild(iconEl('logout')); out.appendChild(oico);
     const om=el('span','rmid');
     om.appendChild(el('span','rname','Sign out'));
-    om.appendChild(el('span','rsub','Your cloud data stays saved. Sign in again with the same password.'));
+    om.appendChild(el('span','rsub wrap','Your cloud data stays saved. Sign in again with the same password.'));
     out.appendChild(om);
     out.onclick=async e=>{
       e.stopPropagation();
@@ -334,10 +338,11 @@ PANELS.settings=()=>({
 
     label(box,'Help');
     const hs=el('button','row'); hs.type='button';
-    hs.appendChild(el('span','rico','⌨'));
+    const hico=el('span','rico'); hico.appendChild(iconEl('keys')); hs.appendChild(hico);
     const m2=el('span','rmid');
     m2.appendChild(el('span','rname','Controls & shortcuts'));
-    hs.appendChild(m2); hs.appendChild(el('span','redit','\u203A'));
+    hs.appendChild(m2);
+    const hchev=el('span','redit'); hchev.appendChild(iconEl('right')); hs.appendChild(hchev);
     hs.onclick=e=>{ e.stopPropagation(); pushPanel('help',{}); };
     box.appendChild(hs);
   }
@@ -361,12 +366,12 @@ PANELS.help=()=>({
     add('Tap \u2014 a video you paused','Resume playback right away');
     add('Tap \u2014 controls showing','Play / pause, and put the controls away');
     add('Wait a moment','The controls hide themselves again');
-    add('Tap \u25BE (by the title)','Slide the info tray away \u2014 media only');
-    add('Tap \u25B4 (bottom right)','Bring the info tray back');
+    add('Tap the chevron by the title','Slide the info tray away \u2014 media only');
+    add('Tap the chevron, bottom right','Bring the info tray back');
     add('Tap with the tray shut','Play / pause');
     add('Swipe sideways','Move through a gallery');
     add('Tap r/name','Jump to that subreddit alone');
-    add('Tap \u2606','Add the subreddit to Favourites');
+    add('Tap the star','Add the subreddit to Favourites');
     label(box,'Keyboard');
     add('j / k  \u00B7  \u2193 / \u2191','Next / previous post');
     add('\u2190 / \u2192','Previous / next image in a gallery');

@@ -77,7 +77,7 @@ function mediaNode(item,post,sec,slotIdx){
     if(!slotIdx) sec._video=v;
 
     const pz=document.createElement('div');
-    pz.className='paused'; pz.innerHTML='<i>▶</i>';
+    pz.className='paused'; pz.innerHTML='<i>'+iconHTML('play')+'</i>';
     v.addEventListener('play',()=>pz.classList.remove('show'));
     v.addEventListener('pause',()=>{ if(!document.hidden) pz.classList.add('show'); });
     holder.appendChild(pz);
@@ -86,7 +86,7 @@ function mediaNode(item,post,sec,slotIdx){
     const f=document.createElement('div');
     f.className='facade';
     if(item.poster){ const im=document.createElement('img'); im.src=item.poster; im.loading='lazy'; f.appendChild(im); }
-    const t=document.createElement('div'); t.className='tri'; t.textContent='▶';
+    const t=document.createElement('div'); t.className='tri'; t.innerHTML=iconHTML('play');
     f.appendChild(t);
     f.addEventListener('click',e=>{
       e.stopPropagation();
@@ -108,7 +108,7 @@ function applyMute(){
     if(v._audio){ v._audio.muted=S.muted; v._audio.volume=1; }
   });
   feed.querySelectorAll('.ract.mute').forEach(b=>{
-    b.firstChild.textContent=S.muted?'🔇':'🔊';
+    b.innerHTML=iconHTML(S.muted?'soundOff':'soundOn')+'<small>Sound</small>';
     b.setAttribute('aria-label',S.muted?'Unmute':'Mute');
   });
 }
@@ -143,7 +143,8 @@ function buildPost(post){
   }else{
     const stage=document.createElement('div');
     stage.className='noimg';
-    stage.textContent=post.is_self?'Text post':(post.domain||'Link');
+    stage.innerHTML=iconHTML(post.is_self?'book':'open')+
+      '<span>'+esc(post.is_self?'Text post':(post.domain||'Link'))+'</span>';
     sec.appendChild(stage);
   }
 
@@ -169,16 +170,17 @@ function buildPost(post){
 
   const stats=document.createElement('div');
   stats.className='stats';
-  stats.innerHTML=`<span><b>▲ ${fmt(post.score)}</b></span>`+
-    `<a href="https://reddit.com${post.permalink}" target="_blank" rel="noopener">${fmt(post.num_comments)} comments</a>`+
-    (media.length>1?`<span>${media.length} images</span>`:'');
+  stats.innerHTML=`<span>${iconHTML('score')}<b>${fmt(post.score)}</b></span>`+
+    `<a href="https://reddit.com${post.permalink}" target="_blank" rel="noopener">`+
+      `${iconHTML('comment')}<span>${fmt(post.num_comments)}</span></a>`+
+    (media.length>1?`<span>${iconHTML('images')}<span>${media.length}</span></span>`:'');
   const cl=stats.querySelector('a');
   if(cl) cl.addEventListener('click',e=>e.stopPropagation());
 
   // Tray chevron
   const trayDn=document.createElement('button');
   trayDn.className='tray-ch tray-dn'; trayDn.type='button';
-  trayDn.textContent='▾';
+  trayDn.innerHTML=iconHTML('down');
   trayDn.setAttribute('aria-label','Hide post info');
   trayDn.addEventListener('click',e=>{ e.stopPropagation(); setClear(true); });
 
@@ -199,7 +201,7 @@ function buildPost(post){
   const paintStar=()=>{
     const on=isFav(post.subreddit);
     star.classList.toggle('on',on);
-    star.innerHTML=(on?'★':'☆')+'<small>'+(on?'Saved':'Fav')+'</small>';
+    star.innerHTML=iconHTML('star')+'<small>'+(on?'Saved':'Fav')+'</small>';
     star.setAttribute('aria-label',(on?'Remove r/':'Add r/')+post.subreddit+' to favourites');
   };
   paintStar();
@@ -212,14 +214,15 @@ function buildPost(post){
   if(hasAudio){
     const mb=document.createElement('button');
     mb.className='ract mute'; mb.type='button';
-    mb.innerHTML=(S.muted?'🔇':'🔊')+'<small>Sound</small>';
+    mb.innerHTML=iconHTML(S.muted?'soundOff':'soundOn')+'<small>Sound</small>';
+    mb.setAttribute('aria-label',S.muted?'Unmute':'Mute');
     mb.addEventListener('click',e=>{ e.stopPropagation(); S.muted=!S.muted; save(); applyMute(); });
     rail.appendChild(mb);
   }
 
   const share=document.createElement('button');
   share.className='ract'; share.type='button';
-  share.innerHTML='↗<small>Open</small>';
+  share.innerHTML=iconHTML('open')+'<small>Open</small>';
   share.setAttribute('aria-label','Open on Reddit');
   share.addEventListener('click',e=>{
     e.stopPropagation();
@@ -337,7 +340,7 @@ function buildPost(post){
   // NSFW reveal
   if(S.blur&&post.over_18){
     const r=document.createElement('div');
-    r.className='reveal'; r.innerHTML='<b>18+ — tap to view</b>';
+    r.className='reveal'; r.innerHTML='<b>'+iconHTML('eye')+'18+ — tap to view</b>';
     r.addEventListener('click',e=>{
       e.stopPropagation();
       sec.querySelectorAll('.blurred').forEach(x=>x.classList.remove('blurred'));

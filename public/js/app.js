@@ -260,7 +260,7 @@ feed.addEventListener('scroll',()=>{
 let stack=[];
 const sheetOpen=()=>stack.length>0;
 
-function renderTop(){
+function renderTop(dir){
   const top=stack[stack.length-1];
   if(!top) return;
   const spec=PANELS[top.name](top.args||{});
@@ -270,73 +270,106 @@ function renderTop(){
 
   if(spec.action){
     sheetAction.hidden=false;
-    sheetAction.textContent=spec.action.label;
+    sheetAction.innerHTML='';
+    if(spec.action.icon) sheetAction.appendChild(iconEl(spec.action.icon));
+    sheetAction.appendChild(el('span',null,spec.action.label));
     sheetAction.className='sbtn'+(spec.action.pri?' pri':'');
     sheetAction.onclick=e=>{ e.stopPropagation(); spec.action.run(); };
   }else sheetAction.hidden=true;
 
-  sheetBody.innerHTML='';
-  spec.body(sheetBody);
-  sheetBody.scrollTop=top.scroll||0;
+  // Rebuild the body off-document so half-built panels never paint.
+  const frag=document.createElement('div');
+  spec.body(frag);
+  sheetBody.replaceChildren(...frag.childNodes);
 
   sheetFoot.innerHTML='';
   if(spec.foot&&spec.foot.length){
     sheetFoot.hidden=false;
     spec.foot.forEach(b=>{
       const btn=document.createElement('button');
-      btn.textContent=b.label;
-      if(b.pri) btn.className='pri';
-      if(b.danger) btn.className='danger';
+      btn.type='button';
+      if(b.icon) btn.appendChild(iconEl(b.icon));
+      if(b.label) btn.appendChild(el('span',null,b.label));
+      if(b.danger){ btn.className='danger'; btn.setAttribute('aria-label',b.label); btn.querySelector('span').remove(); }
+      else if(b.pri) btn.className='pri';
       if(b.disabled) btn.disabled=true;
       btn.onclick=e=>{ e.stopPropagation(); b.run(); };
       sheetFoot.appendChild(btn);
     });
   }else sheetFoot.hidden=true;
+
+  // Directional slide only when the stack actually moved.
+  sheetBody.classList.remove('slide-l','slide-r');
+  if(dir){
+    void sheetBody.offsetWidth;
+    sheetBody.classList.add(dir>0?'slide-l':'slide-r');
+  }
+  sheetBody.scrollTop=dir?0:(top.scroll||0);
 }
 
-function refresh(){ if(stack.length){ stack[stack.length-1].scroll=sheetBody.scrollTop; renderTop(); } }
+function refresh(){ if(stack.length){ stack[stack.length-1].scroll=sheetBody.scrollTop; renderTop(0); } }
 
 function pushPanel(name,args){
-  if(stack.length) stack[stack.length-1].scroll=sheetBody.scrollTop;
+  const first=!stack.length;
+  if(!first) stack[stack.length-1].scroll=sheetBody.scrollTop;
   stack.push({name,args});
-  renderTop();
-  if(stack.length===1){
+  renderTop(first?0:1);
+  if(first){
     sheetEl.classList.add('mounted');
     document.body.classList.add('sheet-open');
+    setSheetY(0);
     requestAnimationFrame(()=>requestAnimationFrame(()=>sheetEl.classList.add('up')));
   }
 }
 
 function popPanel(){
   if(stack.length<=1) return closeSheet();
-  stack.pop(); renderTop();
+  stack.pop(); renderTop(-1);
 }
 
+let closeT=null;
 function closeSheet(){
   if(!stack.length) return;
   stack=[];
-  sheetEl.classList.remove('up');
+  sheetEl.classList.remove('up','drag');
+  setSheetY(0);
   document.body.classList.remove('sheet-open');
+  const a=document.activeElement;
+  if(a&&sheetEl.contains(a)) a.blur();
   pokeChrome();
-  const done=()=>{ if(!stack.length) sheetEl.classList.remove('mounted'); };
-  setTimeout(done,380);
+  clearTimeout(closeT);
+  closeT=setTimeout(()=>{
+    if(stack.length) return;
+    sheetEl.classList.remove('mounted');
+    sheetBody.replaceChildren();      // don't keep a stale panel alive
+    sheetFoot.replaceChildren();
+    sheetFoot.hidden=true;
+  },420);
 }
 
-function openSheet(name,args){ stack=[]; pushPanel(name,args); }
+function openSheet(name,args){
+  clearTimeout(closeT);
+  if(stack.length){ stack=[]; sheetBody.classList.remove('slide-l','slide-r'); }
+  pushPanel(name,args);
+}
 
+// The sheet's offset is a variable, so drag and rest share one transform
+// and there is never a competing inline style to fight the transition.
+function setSheetY(px){ sheetEl.style.setProperty('--sy', px+'px'); }
+
+// With --kb driving the layout, the field only needs to be scrolled into
+// view inside the already-resized body.
 function keepFieldVisible(inp){
-  const vv=window.visualViewport;
-  if(!vv||!inp||!inp.isConnected) return;
-  const check=()=>{
+  if(!inp) return;
+  const run=()=>{
     if(!inp.isConnected) return;
-    const r=inp.getBoundingClientRect();
-    const bottom=vv.offsetTop+vv.height;
-    const over=r.bottom+12-bottom;
-    if(over>0&&sheetBody) sheetBody.scrollTop+=over;
+    const r=inp.getBoundingClientRect(), b=sheetBody.getBoundingClientRect();
+    const over=r.bottom+12-b.bottom;
+    if(over>0) sheetBody.scrollBy({top:over,behavior:'smooth'});
+    else if(r.top<b.top+8) sheetBody.scrollBy({top:r.top-b.top-8,behavior:'smooth'});
   };
-  check();
-  vv.addEventListener('resize',check,{once:true});
-  setTimeout(check,300);
+  requestAnimationFrame(run);
+  setTimeout(run,320);
 }
 
 // Sheet dismissal
@@ -344,37 +377,63 @@ sheetBack.onclick=e=>{ e.stopPropagation(); popPanel(); };
 scrimEl.onclick=()=>closeSheet();
 sheetEl.addEventListener('click',e=>e.stopPropagation());
 
-// Swipe down to dismiss
+/* ── Swipe to dismiss ──────────────────────────────────────────────────────
+   Drag from the handle or header, and from the body when it is scrolled to
+   the top. Rubber-bands upward, tracks 1:1 downward, and decides on release
+   using velocity first, distance second — so a quick flick closes even a
+   tall sheet, while a slow drag has to clear a third of its height. */
 (()=>{
-  const grip=$('#sheetHandle'), head=sheetEl.querySelector('.shead');
-  let id=null,y0=0,dy=0,live=false;
+  const grip=$('#sheetHandle');
+  let id=null,y0=0,dy=0,live=false,fromBody=false,t0=0,lastY=0,lastT=0,vel=0;
+
   const start=e=>{
     if(e.pointerType==='mouse'&&e.button!==0) return;
-    if(e.target.closest('button,input')) return;
-    id=e.pointerId; y0=e.clientY; dy=0; live=true;
-    sheetEl.classList.add('drag');
-    try{ sheetEl.setPointerCapture(id); }catch(_){}
+    if(id!==null) return;
+    if(e.target.closest('button,input,select,textarea,a')) return;
+    fromBody=sheetBody.contains(e.target);
+    if(fromBody&&sheetBody.scrollTop>0) return;
+    id=e.pointerId; y0=lastY=e.clientY; dy=0; vel=0;
+    t0=lastT=e.timeStamp; live=!fromBody;   // body drags arm on first move
+    if(live) sheetEl.classList.add('drag');
   };
+
   const move=e=>{
-    if(e.pointerId!==id||!live) return;
-    dy=Math.max(0,e.clientY-y0);
-    e.preventDefault();
-    sheetEl.style.transform=`translateY(${dy}px)`;
+    if(e.pointerId!==id) return;
+    const raw=e.clientY-y0;
+    if(!live){
+      if(raw<4) { if(raw<-4){ id=null; } return; }   // let the body scroll
+      live=true; y0=e.clientY;
+      sheetEl.classList.add('drag');
+      try{ sheetEl.setPointerCapture(id); }catch(_){}
+    }
+    const d=e.clientY-y0;
+    const dt=e.timeStamp-lastT;
+    if(dt>0){ vel=(e.clientY-lastY)/dt; lastY=e.clientY; lastT=e.timeStamp; }
+    dy = d>0 ? d : -Math.pow(-d,.55)*1.6;   // resist upward
+    if(e.cancelable) e.preventDefault();
+    setSheetY(dy);
   };
+
   const end=e=>{
     if(e.pointerId!==id) return;
     try{ sheetEl.releasePointerCapture(id); }catch(_){}
+    const wasLive=live;
+    id=null; live=false; fromBody=false;
+    if(!wasLive) return;
     sheetEl.classList.remove('drag');
-    sheetEl.style.transform='';
-    if(dy>90) closeSheet();
-    id=null; live=false; dy=0;
+    const h=sheetEl.getBoundingClientRect().height||1;
+    const flick=vel>0.55;
+    const far=dy>h*0.33;
+    if(flick||far){ closeSheet(); }
+    else setSheetY(0);
+    dy=0; vel=0;
   };
-  [grip,head].forEach(el=>{
-    el.addEventListener('pointerdown',start);
-    el.addEventListener('pointermove',move,{passive:false});
-    el.addEventListener('pointerup',end);
-    el.addEventListener('pointercancel',end);
-  });
+
+  sheetEl.addEventListener('pointerdown',start);
+  sheetEl.addEventListener('pointermove',move,{passive:false});
+  sheetEl.addEventListener('pointerup',end);
+  sheetEl.addEventListener('pointercancel',end);
+  grip.addEventListener('dragstart',e=>e.preventDefault());
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -383,7 +442,7 @@ sheetEl.addEventListener('click',e=>e.stopPropagation());
 
 function paintHeader(){
   const g=active();
-  feedIco.textContent=g.icon;
+  setIcon(feedIco,iconName(g.icon));
   feedName.textContent=g.name;
   const n=g.subs.length;
   feedMeta.textContent = n===0 ? 'empty'
@@ -398,19 +457,21 @@ function paintSorts(){
   sortsEl.innerHTML='';
   SORTS.forEach(([v,l])=>{
     const b=document.createElement('button');
+    b.type='button';
     b.className='schip'+(g.sort===v?' on':'');
     b.textContent=l;
+    b.setAttribute('aria-pressed',String(g.sort===v));
     b.onclick=()=>{ if(g.sort===v) return; g.sort=v; save(); paintSorts(); load(true); };
     sortsEl.appendChild(b);
   });
   if(g.sort==='top'||g.sort==='controversial'){
-    const sep=document.createElement('span');
-    sep.style.cssText='flex:0 0 auto;width:1px;background:var(--line);margin:5px 3px';
-    sortsEl.appendChild(sep);
+    sortsEl.appendChild(el('span','sep'));
     TIMES.forEach(([v,l])=>{
       const b=document.createElement('button');
+      b.type='button';
       b.className='schip t'+(g.time===v?' on':'');
       b.textContent=l;
+      b.setAttribute('aria-pressed',String(g.time===v));
       b.onclick=()=>{ if(g.time===v) return; g.time=v; save(); paintSorts(); load(true); };
       sortsEl.appendChild(b);
     });
@@ -427,7 +488,7 @@ function switchTo(id){
 }
 
 function openSingle(name){
-  S.tmp=mkGroup({id:TMP,name:'r/'+name,icon:'⌕',subs:[name],
+  S.tmp=mkGroup({id:TMP,name:'r/'+name,icon:'search',subs:[name],
     sort:active().sort,time:active().time});
   S.activeId=TMP;
   paintHeader(); load(true);
@@ -436,7 +497,7 @@ function openSingle(name){
 
 function openMulti(list){
   list=list.slice(0,CFG.MAX_SUBS);
-  S.tmp=mkGroup({id:TMP,name:list.length===1?('r/'+list[0]):'Search',icon:'⌕',
+  S.tmp=mkGroup({id:TMP,name:list.length===1?('r/'+list[0]):'Search',icon:'search',
     subs:list,sort:active().sort,time:active().time});
   S.activeId=TMP;
   paintHeader(); load(true);
@@ -467,6 +528,24 @@ function toggleFav(name){
   repaintStars();
   paintHeader();
 }
+
+// Static chrome icons
+setIcon($('#feedChev'),'down');
+setIcon($('#btnSearch'),'search');
+setIcon($('#btnMore'),'more');
+setIcon($('#sheetBack'),'left');
+setIcon($('#clearX'),'up');
+setIcon($('.account-mark'),'sparkle');
+
+// Publish the header's real height so the gallery dots can duck under it
+(()=>{
+  const sync=()=>{
+    const h=hdrEl.getBoundingClientRect().height;
+    if(h) document.documentElement.style.setProperty('--chrome-h',Math.round(h+8)+'px');
+  };
+  if(window.ResizeObserver) new ResizeObserver(sync).observe(hdrEl);
+  sync();
+})();
 
 // Header buttons
 $('#feedPill').onclick =()=>openSheet('feeds');
@@ -542,7 +621,7 @@ function readHash(){
   if(!m) return false;
   const subs=decodeURIComponent(m[1]).split('+').filter(Boolean).slice(0,CFG.MAX_SUBS);
   if(!subs.length) return false;
-  S.tmp=mkGroup({id:TMP,name:subs.length===1?('r/'+subs[0]):'Linked feed',icon:'⌕',
+  S.tmp=mkGroup({id:TMP,name:subs.length===1?('r/'+subs[0]):'Linked feed',icon:'search',
     subs,sort:m[2]||'hot',time:m[3]||'all'});
   S.activeId=TMP;
   return true;
