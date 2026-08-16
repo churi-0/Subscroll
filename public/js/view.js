@@ -77,7 +77,7 @@ function mediaNode(item,post,sec,slotIdx){
     if(!slotIdx) sec._video=v;
 
     const pz=document.createElement('div');
-    pz.className='paused'; pz.innerHTML='<i>'+icon('play',26)+'</i>';
+    pz.className='paused'; pz.innerHTML='<i>▶</i>';
     v.addEventListener('play',()=>pz.classList.remove('show'));
     v.addEventListener('pause',()=>{ if(!document.hidden) pz.classList.add('show'); });
     holder.appendChild(pz);
@@ -86,7 +86,7 @@ function mediaNode(item,post,sec,slotIdx){
     const f=document.createElement('div');
     f.className='facade';
     if(item.poster){ const im=document.createElement('img'); im.src=item.poster; im.loading='lazy'; f.appendChild(im); }
-    const t=document.createElement('div'); t.className='tri'; t.innerHTML=icon('play',26);
+    const t=document.createElement('div'); t.className='tri'; t.textContent='▶';
     f.appendChild(t);
     f.addEventListener('click',e=>{
       e.stopPropagation();
@@ -108,10 +108,7 @@ function applyMute(){
     if(v._audio){ v._audio.muted=S.muted; v._audio.volume=1; }
   });
   feed.querySelectorAll('.ract.mute').forEach(b=>{
-    const ic=b.querySelector('.icn');
-    if(ic) ic.innerHTML=ICO[S.muted?'sndOff':'snd'];
-    const sm=b.querySelector('small');
-    if(sm) sm.textContent=S.muted?'Muted':'Sound';
+    b.firstChild.textContent=S.muted?'🔇':'🔊';
     b.setAttribute('aria-label',S.muted?'Unmute':'Mute');
   });
 }
@@ -181,7 +178,7 @@ function buildPost(post){
   // Tray chevron
   const trayDn=document.createElement('button');
   trayDn.className='tray-ch tray-dn'; trayDn.type='button';
-  trayDn.innerHTML=icon('chevD',14);
+  trayDn.textContent='▾';
   trayDn.setAttribute('aria-label','Hide post info');
   trayDn.addEventListener('click',e=>{ e.stopPropagation(); setClear(true); });
 
@@ -202,7 +199,7 @@ function buildPost(post){
   const paintStar=()=>{
     const on=isFav(post.subreddit);
     star.classList.toggle('on',on);
-    star.innerHTML=icon(on?'starF':'star',23)+'<small>'+(on?'Saved':'Fav')+'</small>';
+    star.innerHTML=(on?'★':'☆')+'<small>'+(on?'Saved':'Fav')+'</small>';
     star.setAttribute('aria-label',(on?'Remove r/':'Add r/')+post.subreddit+' to favourites');
   };
   paintStar();
@@ -215,14 +212,14 @@ function buildPost(post){
   if(hasAudio){
     const mb=document.createElement('button');
     mb.className='ract mute'; mb.type='button';
-    mb.innerHTML=icon(S.muted?'sndOff':'snd',22)+'<small>'+(S.muted?'Muted':'Sound')+'</small>';
+    mb.innerHTML=(S.muted?'🔇':'🔊')+'<small>Sound</small>';
     mb.addEventListener('click',e=>{ e.stopPropagation(); S.muted=!S.muted; save(); applyMute(); });
     rail.appendChild(mb);
   }
 
   const share=document.createElement('button');
   share.className='ract'; share.type='button';
-  share.innerHTML=icon('open',22)+'<small>Open</small>';
+  share.innerHTML='↗<small>Open</small>';
   share.setAttribute('aria-label','Open on Reddit');
   share.addEventListener('click',e=>{
     e.stopPropagation();

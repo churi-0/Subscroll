@@ -15,7 +15,7 @@ const PANELS={};
 
 PANELS.feeds=()=>({
   title:'Feeds',
-  action:{label:'New',icon:'plus',run:()=>newGroup()},
+  action:{label:'+ New',run:()=>newGroup()},
   body(box){
     S.groups.forEach((g,i)=>{
       if(i===0) label(box,'Default');
@@ -28,8 +28,7 @@ PANELS.feeds=()=>({
       mid.appendChild(el('span','rsub',
         g.subs.length?g.subs.map(s=>'r/'+s).join('  ·  '):'Empty — tap the pencil to add subreddits'));
       row.appendChild(mid);
-      const ed=el('span','redit');
-      ed.innerHTML=icon('pen',17);
+      const ed=el('span','redit','✎');
       ed.setAttribute('role','button');
       ed.setAttribute('aria-label','Edit '+g.name);
       ed.onclick=e=>{ e.stopPropagation(); pushPanel('group',{id:g.id}); };
@@ -39,7 +38,7 @@ PANELS.feeds=()=>({
     });
     if(S.groups.length===1){
       emptyNote(box,'No groups yet',
-        'A group is a named set of subreddits that plays as one feed. Tap "New" to make one.');
+        'A group is a named set of subreddits that plays as one feed. Tap "+ New" to make one.');
     }
   }
 });
@@ -60,8 +59,10 @@ PANELS.group=({id})=>{
     body(box){
       const wrap=el('div','fld');
       wrap.appendChild(el('span',null,'Name'));
-      const rowf=el('div','gf-row');
-      const ib=el('button','ibtn',g.icon);
+      const rowf=el('div');
+      rowf.style.cssText='display:flex;gap:8px';
+      const ib=el('button','ic',g.icon);
+      ib.style.cssText='width:46px;height:46px;font-size:19px;border-radius:14px';
       ib.setAttribute('aria-label','Change icon');
       ib.onclick=e=>{ e.stopPropagation(); pushPanel('icon',{id:g.id}); };
       const inp=el('input','inp');
@@ -83,15 +84,13 @@ PANELS.group=({id})=>{
         mid.appendChild(el('span','rname','r/'+name));
         row.appendChild(mid);
         const ord=el('span','rord');
-        const up=el('button',null), dn=el('button',null);
-        up.innerHTML=icon('up',12); dn.innerHTML=icon('dn',12);
+        const up=el('button',null,'▲'), dn=el('button',null,'▼');
         up.disabled=i===0; dn.disabled=i===g.subs.length-1;
         up.setAttribute('aria-label','Move up'); dn.setAttribute('aria-label','Move down');
         up.onclick=e=>{ e.stopPropagation(); g.subs.splice(i-1,0,g.subs.splice(i,1)[0]); commit(g,false); };
         dn.onclick=e=>{ e.stopPropagation(); g.subs.splice(i+1,0,g.subs.splice(i,1)[0]); commit(g,false); };
         ord.append(up,dn); row.appendChild(ord);
-        const x=el('button','redit');
-        x.innerHTML=icon('x',15);
+        const x=el('button','redit','✕');
         x.setAttribute('aria-label','Remove r/'+name);
         x.onclick=e=>{ e.stopPropagation(); g.subs.splice(i,1); commit(g); };
         row.appendChild(x);
@@ -118,7 +117,7 @@ PANELS.group=({id})=>{
       if(fav){
         const n=el('div','note');
         n.textContent='Favourites is your default feed — it loads on launch and can\'t be deleted. '+
-                      'Tap the star on any post to add that subreddit here.';
+                      'Tap ☆ on any post to add that subreddit here.';
         box.appendChild(n);
       }
     },
@@ -145,10 +144,13 @@ PANELS.group=({id})=>{
 PANELS.icon=({id})=>({
   title:'Pick an icon',
   body(box){
-    const grid=el('div','icongrid');
+    const grid=el('div');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;padding:8px';
     const g=S.groups.find(x=>x.id===id);
     ICONS.forEach(ic=>{
-      const b=el('button','ic'+(g&&g.icon===ic?' on':''),ic);
+      const b=el('button','ic',ic);
+      b.style.cssText='width:100%;height:58px;font-size:22px;border-radius:14px';
+      if(g&&g.icon===ic) b.style.cssText+=';border-color:var(--acc);color:var(--acc)';
       b.onclick=e=>{ e.stopPropagation(); if(g){ g.icon=ic; save(); paintHeader(); } popPanel(); };
       grid.appendChild(b);
     });
@@ -186,9 +188,7 @@ PANELS.search=({into})=>{
           target.subs.forEach((n,i)=>{
             const c=el('span','chip');
             c.appendChild(el('span',null,'r/'+n));
-            const x=el('button',null);
-            x.innerHTML=icon('x',11);
-            x.setAttribute('aria-label','Remove r/'+n);
+            const x=el('button',null,'✕');
             x.onclick=e=>{ e.stopPropagation(); target.subs.splice(i,1);
               save(); paintChips(); paintHeader(); repaintStars();
               if(S.activeId===target.id) load(true); };
@@ -310,7 +310,7 @@ PANELS.settings=()=>({
 
     label(box,'Account');
     const cloud=el('div','row');
-    const cc=el('span','rico'); cc.innerHTML=icon('cloud',18); cloud.appendChild(cc);
+    cloud.appendChild(el('span','rico','☁'));
     const cm=el('span','rmid');
     cm.appendChild(el('span','rname','Cloud sync active'));
     cm.appendChild(el('span','rsub','Client ID, groups and preferences are saved in Cloudflare D1.'));
@@ -318,7 +318,7 @@ PANELS.settings=()=>({
     box.appendChild(cloud);
 
     const out=el('button','row'); out.type='button';
-    const oo=el('span','rico'); oo.innerHTML=icon('out',18); out.appendChild(oo);
+    out.appendChild(el('span','rico','↪'));
     const om=el('span','rmid');
     om.appendChild(el('span','rname','Sign out'));
     om.appendChild(el('span','rsub','Your cloud data stays saved. Sign in again with the same password.'));
@@ -334,10 +334,10 @@ PANELS.settings=()=>({
 
     label(box,'Help');
     const hs=el('button','row'); hs.type='button';
-    const hk=el('span','rico'); hk.innerHTML=icon('key',18); hs.appendChild(hk);
+    hs.appendChild(el('span','rico','⌨'));
     const m2=el('span','rmid');
     m2.appendChild(el('span','rname','Controls & shortcuts'));
-    const hc=el('span','redit'); hc.innerHTML=icon('chevR',16); hs.appendChild(m2); hs.appendChild(hc);
+    hs.appendChild(m2); hs.appendChild(el('span','redit','\u203A'));
     hs.onclick=e=>{ e.stopPropagation(); pushPanel('help',{}); };
     box.appendChild(hs);
   }
@@ -361,12 +361,12 @@ PANELS.help=()=>({
     add('Tap \u2014 a video you paused','Resume playback right away');
     add('Tap \u2014 controls showing','Play / pause, and put the controls away');
     add('Wait a moment','The controls hide themselves again');
-    add('Tap \u2304 (by the title)','Slide the info tray away \u2014 media only');
-    add('Tap \u2303 (bottom right)','Bring the info tray back');
+    add('Tap \u25BE (by the title)','Slide the info tray away \u2014 media only');
+    add('Tap \u25B4 (bottom right)','Bring the info tray back');
     add('Tap with the tray shut','Play / pause');
     add('Swipe sideways','Move through a gallery');
     add('Tap r/name','Jump to that subreddit alone');
-    add('Tap the star','Add the subreddit to Favourites');
+    add('Tap \u2606','Add the subreddit to Favourites');
     label(box,'Keyboard');
     add('j / k  \u00B7  \u2193 / \u2191','Next / previous post');
     add('\u2190 / \u2192','Previous / next image in a gallery');
