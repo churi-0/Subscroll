@@ -20,8 +20,8 @@ export async function onRequestPost({request,env}){
     catch(_){ return json({error:'Send a JSON password.'},400); }
 
     const password=body&&body.password;
-    if(typeof password!=='string'||password.length<8)
-      return json({error:'Use a password of at least 8 characters.'},400);
+    if(typeof password!=='string'||password.length<4)
+      return json({error:'Use a password of at least 4 characters.'},400);
     if(password.length>256)
       return json({error:'Password is too long.'},400);
 
