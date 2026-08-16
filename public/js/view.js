@@ -357,12 +357,21 @@ function buildPost(post){
     if(isClear()){ togglePlay(sec); return; }
 
     const v=curVideo(sec);
-    if(v&&v.paused&&v.dataset.userPaused==='1'){
+
+    // Paused media always resumes on the next tap, whatever the shelf is
+    // doing — and resuming never summons the shelf. This covers media the
+    // user paused as well as media stopped by a stall, an ended clip or a
+    // refused autoplay, all of which show the same play badge.
+    if(v&&v.paused){
       togglePlay(sec);
       if(chromeOn) setChrome(false);
       return;
     }
+
+    // Shelf hidden: the first tap only reveals it, it never pauses.
     if(!chromeOn){ setChrome(true); return; }
+
+    // Shelf visible: tap pauses and dismisses the shelf.
     setChrome(false);
     togglePlay(sec);
   });
