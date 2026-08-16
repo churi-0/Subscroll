@@ -1,58 +1,68 @@
 /* ══════════════════════════════════════════════════════════════════════════
    SUBSCROLL — one design system
    ──────────────────────────────────────────────────────────────────────────
-   Mobile-first. Every surface in the app (header, sheet, gate, toast) is
-   built from the same four tokens: a surface colour, a hairline, a radius
-   and a control height. Nothing is styled locally, so nothing drifts.
+   Mobile-first. There is exactly ONE piece of chrome: a shelf pinned to the
+   top of the screen. The bar, the sort row and every panel are parts of that
+   same shelf, so nothing can look detached from anything else.
+
+   Panels do not fly in from elsewhere — the shelf simply gets taller, like a
+   blind being let down, and shorter when it closes. One surface, one motion.
+
    Monochrome by design: emphasis comes from contrast, never from hue.
+   Geometry is soft-rectangular, not pill-shaped: radii are small and shared.
    ══════════════════════════════════════════════════════════════════════════ */
 
 :root{
   /* Surfaces — each step is a real, perceptible lift */
   --bg:#000;
-  --s1:#0d0f11;          /* floating chrome: header, sheet, gate      */
-  --s2:#17191d;          /* rows, inputs, quiet controls              */
-  --s3:#232629;          /* pressed / focused                         */
-  --s4:#2f3336;          /* strongest fill                            */
+  --s1:#101216;          /* the shelf, the gate: the one "chrome" material */
+  --s2:#1a1d22;          /* rows, inputs, quiet controls                   */
+  --s3:#24282e;          /* pressed / focused                              */
+  --s4:#31363d;          /* strongest fill                                 */
 
   /* Hairlines */
-  --line:rgba(255,255,255,.09);
-  --line-2:rgba(255,255,255,.16);
+  --line:rgba(255,255,255,.08);
+  --line-2:rgba(255,255,255,.15);
 
   /* Ink */
-  --txt:#f4f6f8;
-  --dim:#a2a8af;
-  --dim-2:#6d737a;
+  --txt:#f2f5f7;
+  --dim:#9ba2aa;
+  --dim-2:#6a7178;
 
   /* Emphasis is contrast, not colour */
-  --hi:#f4f6f8;          /* "accent": near-white fill                 */
-  --on-hi:#0a0b0c;       /* ink on a --hi fill                        */
-  --hi-soft:rgba(255,255,255,.10);
-  --danger:#e0796c;      /* reserved: destructive + error text only   */
+  --hi:#f2f5f7;
+  --on-hi:#0b0d0f;
+  --hi-soft:rgba(255,255,255,.09);
+  --danger:#e0796c;
 
-  /* Geometry — one radius scale, used everywhere */
-  --r-xl:26px; --r-lg:18px; --r-md:13px; --r-sm:9px; --r-pill:999px;
+  /* Geometry — soft rectangles, never capsules */
+  --r-xl:22px; --r-lg:16px; --r-md:11px; --r-sm:8px; --r-xs:6px; --r-pill:999px;
 
-  /* Controls — one height scale, used everywhere */
-  --h-lg:50px; --h-md:42px; --h-sm:34px;
+  /* Controls — one height scale */
+  --h-lg:48px; --h-md:40px; --h-sm:32px;
 
-  /* Motion */
+  /* Motion — one curve for size, one for entrance */
   --ease:cubic-bezier(.32,.72,0,1);
   --ease-out:cubic-bezier(.22,1,.36,1);
-  --t-fast:.16s; --t-mid:.26s; --t-slow:.38s;
+  --t-fast:.15s; --t-mid:.24s; --t-slow:.42s;
 
   /* Insets */
   --top:env(safe-area-inset-top,0px);
   --bot:env(safe-area-inset-bottom,0px);
   --lft:env(safe-area-inset-left,0px);
   --rgt:env(safe-area-inset-right,0px);
-  --gut:10px;                        /* the one page gutter           */
+  --gut:14px;
   --kb:0px;                          /* keyboard overlap, set by JS   */
 
-  --rail-w:48px;
+  /* Shelf metrics, published by JS */
+  --ph:0px;                          /* live panel height             */
+  --chrome-h:96px;                   /* shelf head height             */
+
+  --rail-w:46px;
   --rail-r:calc(var(--gut) + var(--rgt));
-  --rail-b:calc(20px + var(--bot));
-  --tray-sz:32px;
+  --rail-b:calc(18px + var(--bot));
+  --tray-sz:34px;
+  --grab-h:24px;
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -80,19 +90,15 @@ svg.i{width:1em;height:1em;flex:0 0 auto;display:block;overflow:visible}
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   SHARED PRIMITIVES — the vocabulary every surface reuses
+   SHARED PRIMITIVES
    ══════════════════════════════════════════════════════════════════════════ */
-
-/* Floating panel: header, sheet and gate card are all this. */
-.panel{background:var(--s1);border:1px solid var(--line);
-  -webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}
 
 /* Quiet square control */
 .ic{width:var(--h-md);height:var(--h-md);border-radius:var(--r-md);
-  background:var(--s2);color:var(--dim);font-size:19px;
+  background:transparent;color:var(--dim);font-size:19px;
   transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
-.ic:active{background:var(--s3);color:var(--txt);transform:scale(.94)}
-.ic.on{background:var(--hi);color:var(--on-hi)}
+.ic:active{background:var(--s3);color:var(--txt);transform:scale(.93)}
+.ic.on{background:var(--s3);color:var(--txt)}
 
 /* Filled / quiet button */
 .btn{height:var(--h-md);padding:0 16px;border-radius:var(--r-md);
@@ -104,24 +110,25 @@ svg.i{width:1em;height:1em;flex:0 0 auto;display:block;overflow:visible}
 .btn[disabled]{opacity:.4;pointer-events:none}
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ACCOUNT GATE
+   ACCOUNT GATE — same material as the shelf
    ══════════════════════════════════════════════════════════════════════════ */
 
 .account-gate{position:fixed;inset:0;z-index:500;display:flex;
-  align-items:flex-end;justify-content:center;background:var(--bg);
-  padding:var(--gut);padding-bottom:calc(var(--gut) + var(--bot) + var(--kb));
-  transition:padding-bottom var(--t-mid) var(--ease)}
-.account-card{width:min(100%,420px);padding:24px 20px calc(24px);
+  align-items:center;justify-content:center;background:var(--bg);
+  padding:calc(var(--gut) + var(--top)) var(--gut) calc(var(--gut) + var(--bot));
+  padding-bottom:calc(var(--gut) + var(--bot) + var(--kb));
+  transition:padding-bottom var(--t-mid) var(--ease);overflow:auto}
+.account-card{width:min(100%,430px);padding:26px 22px;
   border-radius:var(--r-xl);background:var(--s1);border:1px solid var(--line);
-  box-shadow:0 -8px 60px rgba(0,0,0,.7)}
-.account-mark{width:42px;height:42px;border-radius:var(--r-md);background:var(--s2);
-  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
-  color:var(--txt);font-size:21px}
-.account-card h1{margin:0 0 6px;font-size:24px;line-height:1.15;letter-spacing:-.03em;font-weight:680}
-.account-card>p{margin:0 0 20px;color:var(--dim);font-size:13.5px;line-height:1.5}
-#loginForm label{display:block;margin:0 0 8px;color:var(--dim-2);font-size:11px;
-  font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.account-field{display:flex;flex-direction:column;gap:8px}
+  box-shadow:0 24px 70px rgba(0,0,0,.7)}
+.account-mark{width:44px;height:44px;border-radius:var(--r-md);background:var(--s2);
+  display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  color:var(--txt);font-size:22px}
+.account-card h1{margin:0 0 7px;font-size:25px;line-height:1.12;letter-spacing:-.035em;font-weight:680}
+.account-card>p{margin:0 0 22px;color:var(--dim);font-size:13.5px;line-height:1.5}
+#loginForm label{display:block;margin:0 0 9px;color:var(--dim-2);font-size:10.5px;
+  font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.account-field{display:flex;flex-direction:column;gap:9px}
 .account-field input{width:100%;height:var(--h-lg);border:1px solid var(--line);
   border-radius:var(--r-md);background:var(--s2);padding:0 14px;outline:0;font-size:16px;
   transition:border-color var(--t-fast),background var(--t-fast)}
@@ -131,8 +138,8 @@ svg.i{width:1em;height:1em;flex:0 0 auto;display:block;overflow:visible}
   transition:opacity var(--t-fast),transform var(--t-fast)}
 .account-field button:active{transform:scale(.985);opacity:.85}
 .account-field button:disabled{opacity:.5;cursor:wait;transform:none}
-#loginForm small{display:block;margin-top:14px;color:var(--dim-2);font-size:11.5px;line-height:1.55}
-.account-status{min-height:18px;margin-top:12px;color:var(--dim);font-size:12.5px;line-height:1.45}
+#loginForm small{display:block;margin-top:15px;color:var(--dim-2);font-size:11.5px;line-height:1.55}
+.account-status{min-height:18px;margin-top:13px;color:var(--dim);font-size:12.5px;line-height:1.45}
 .account-status.err{color:var(--danger)}
 .account-retry{width:100%;height:var(--h-lg);margin-top:10px;border-radius:var(--r-md);
   background:var(--s2);color:var(--txt);font-size:15px;font-weight:600}
@@ -175,12 +182,12 @@ body.account-locked>.tray-ch{visibility:hidden}
 body.clear .ui{opacity:0}
 body.clear .ui *{pointer-events:none!important}
 
-.shade{position:absolute;left:0;right:0;bottom:0;height:34%;
-  background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,.34) 42%,transparent);
+.shade{position:absolute;left:0;right:0;bottom:0;height:36%;
+  background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,.34) 44%,transparent);
   transition:opacity var(--t-mid)}
 
 .info{position:absolute;left:0;right:0;bottom:0;
-  padding:0 calc(var(--rail-w) + var(--gut) * 2 + var(--rgt)) calc(18px + var(--bot)) calc(16px + var(--lft));
+  padding:0 calc(var(--rail-w) + var(--gut) + var(--rgt)) calc(18px + var(--bot)) calc(var(--gut) + var(--lft));
   display:flex;flex-direction:column;gap:7px}
 
 .who{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#c9ced4;
@@ -191,7 +198,7 @@ body.clear .ui *{pointer-events:none!important}
   white-space:nowrap;min-width:0;flex:0 1 auto}
 .who .dot{opacity:.38}
 .who .au{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:0 1 auto}
-.nsfw{color:#e8a79d;border:1px solid rgba(224,121,108,.45);border-radius:var(--r-sm);
+.nsfw{color:#e8a79d;border:1px solid rgba(224,121,108,.45);border-radius:var(--r-xs);
   padding:1px 5px;font-size:9.5px;letter-spacing:.05em;font-weight:700}
 
 .ttlrow{display:flex;align-items:flex-start;gap:8px}
@@ -208,27 +215,27 @@ body.clear .ui *{pointer-events:none!important}
 .stats b{color:#fff;font-weight:600}
 
 /* Tray chevrons — same control, two positions */
-.tray-ch{width:var(--tray-sz);height:var(--tray-sz);border-radius:var(--r-pill);
-  color:rgba(255,255,255,.6);font-size:16px;
+.tray-ch{width:var(--tray-sz);height:var(--tray-sz);border-radius:var(--r-sm);
+  color:rgba(255,255,255,.62);font-size:16px;
   filter:drop-shadow(0 1px 4px rgba(0,0,0,.9));
-  transition:transform var(--t-fast) var(--ease),color var(--t-fast)}
-.tray-ch:active{transform:scale(.86);color:#fff}
-.tray-dn{flex:0 0 auto;pointer-events:auto;margin-top:-3px}
+  transition:transform var(--t-fast) var(--ease),color var(--t-fast),background var(--t-fast)}
+.tray-ch:active{transform:scale(.88);color:#fff;background:rgba(255,255,255,.1)}
+.tray-dn{flex:0 0 auto;pointer-events:auto;margin-top:-4px}
 .trayup{position:fixed;z-index:75;display:none;
   right:calc(var(--rail-r) + (var(--rail-w) - var(--tray-sz)) / 2);
-  bottom:calc(22px + var(--bot))}
+  bottom:calc(20px + var(--bot))}
 body.clear .trayup{display:inline-flex}
 body.sheet-open .trayup{display:none}
 
 /* Right action rail */
 .rail-a{position:absolute;right:var(--rail-r);bottom:var(--rail-b);
-  display:flex;flex-direction:column;gap:2px;pointer-events:auto;z-index:6}
-.ract{width:var(--rail-w);height:var(--rail-w);border-radius:var(--r-pill);
-  flex-direction:column;gap:3px;color:#fff;font-size:22px;line-height:1;
+  display:flex;flex-direction:column;gap:4px;pointer-events:auto;z-index:6}
+.ract{width:var(--rail-w);height:var(--rail-w);border-radius:var(--r-md);
+  flex-direction:column;gap:3px;color:#fff;font-size:21px;line-height:1;
   filter:drop-shadow(0 2px 6px rgba(0,0,0,.85));
-  transition:transform var(--t-fast) var(--ease),color var(--t-fast)}
+  transition:transform var(--t-fast) var(--ease),color var(--t-fast),background var(--t-fast)}
 .ract small{font-size:9.5px;font-weight:600;color:#dfe3e8;letter-spacing:.01em}
-.ract:active{transform:scale(.88)}
+.ract:active{transform:scale(.9);background:rgba(255,255,255,.1)}
 .ract.on,.ract.on small{color:#fff}
 .ract.on svg.i{fill:currentColor}
 
@@ -244,9 +251,9 @@ body.clear .prog .track{background:rgba(255,255,255,.13)}
 .paused{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   pointer-events:none;opacity:0;transition:opacity var(--t-fast);z-index:4}
 .paused.show{opacity:1}
-.paused i{width:72px;height:72px;border-radius:var(--r-pill);background:rgba(0,0,0,.42);
+.paused i{width:70px;height:70px;border-radius:var(--r-xl);background:rgba(0,0,0,.42);
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:29px;color:#fff;
   font-style:normal}
 
 /* Gallery */
@@ -257,23 +264,24 @@ body.clear .prog .track{background:rgba(255,255,255,.13)}
 .slide{flex:0 0 100%;width:100%;height:100%;position:relative;
   scroll-snap-align:center;scroll-snap-stop:always;
   display:flex;align-items:center;justify-content:center}
-.dots{position:absolute;top:calc(var(--top) + 14px);left:50%;transform:translateX(-50%);
-  display:flex;gap:4px;padding:5px 8px;background:rgba(0,0,0,.42);border-radius:var(--r-pill);
+.dots{position:absolute;top:calc(var(--top) + 12px);left:50%;
+  transform:translateX(-50%);
+  display:flex;gap:4px;padding:5px 8px;background:rgba(0,0,0,.45);border-radius:var(--r-sm);
   z-index:6;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
-  transition:opacity var(--t-mid),transform var(--t-mid) var(--ease)}
+  transition:opacity var(--t-mid),transform var(--t-slow) var(--ease)}
 .dots i{width:5px;height:5px;border-radius:var(--r-pill);background:rgba(255,255,255,.38);
   transition:background var(--t-fast),width var(--t-fast) var(--ease)}
 .dots i.on{background:#fff;width:14px}
 body.clear .dots{opacity:0}
-body.chrome-on .dots{transform:translateX(-50%) translateY(var(--chrome-h,88px))}
+body.chrome-on .dots{transform:translateX(-50%) translateY(var(--chrome-h))}
 
 .facade{position:relative;cursor:pointer;background:#000;display:flex;
   align-items:center;justify-content:center;
   width:min(100vw,calc((100dvh - 40px) * 16 / 9));aspect-ratio:16/9;max-height:100dvh}
 .facade img{width:100%;height:100%;object-fit:cover;opacity:.5}
-.facade .tri{position:absolute;width:68px;height:68px;border-radius:var(--r-pill);
+.facade .tri{position:absolute;width:66px;height:66px;border-radius:var(--r-xl);
   background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.5);
-  display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:27px;color:#fff;
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .noimg{width:min(86vw,540px);aspect-ratio:16/9;display:flex;align-items:center;
   justify-content:center;gap:9px;background:var(--s1);color:var(--dim);font-size:13.5px;
@@ -285,154 +293,185 @@ body.chrome-on .dots{transform:translateX(-50%) translateY(var(--chrome-h,88px))
 .reveal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:#fff;font-size:13.5px;pointer-events:auto;z-index:7}
 .reveal b{display:inline-flex;align-items:center;gap:8px;
-  border:1px solid rgba(255,255,255,.28);border-radius:var(--r-pill);padding:11px 20px;
-  background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.28);border-radius:var(--r-md);padding:12px 20px;
+  background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   font-weight:600}
 .reveal svg.i{font-size:16px}
 
 /* ══════════════════════════════════════════════════════════════════════════
-   HEADER — one floating card, same material as the sheet
+   THE SHELF — bar, sorts and every panel are one surface
+   ──────────────────────────────────────────────────────────────────────────
+   Edge to edge from the top of the screen, rounded only at the bottom, so a
+   panel opening simply makes the same object taller. Nothing floats, nothing
+   arrives from a different direction, nothing can look disjointed.
    ══════════════════════════════════════════════════════════════════════════ */
 
-#hdr{position:fixed;z-index:60;
-  top:calc(var(--top) + var(--gut));
-  left:calc(var(--gut) + var(--lft));
-  right:calc(var(--gut) + var(--rgt));
-  border-radius:var(--r-lg);overflow:hidden;
-  background:rgba(13,15,17,.82);border:1px solid var(--line);
-  -webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);
-  box-shadow:0 12px 34px rgba(0,0,0,.5);
-  transform:translateY(calc(-100% - var(--top) - var(--gut) - 12px));
-  opacity:0;pointer-events:none;
-  transition:transform var(--t-slow) var(--ease),opacity var(--t-fast) linear}
-body.chrome-on #hdr{transform:translateY(0);opacity:1;pointer-events:auto}
+#hdr{position:fixed;z-index:100;top:0;left:0;right:0;
+  padding-top:var(--top);
+  border-radius:0 0 var(--r-xl) var(--r-xl);
+  background:rgba(16,18,22,.86);
+  border-bottom:1px solid var(--line);
+  -webkit-backdrop-filter:blur(24px) saturate(1.5);backdrop-filter:blur(24px) saturate(1.5);
+  box-shadow:0 16px 40px -14px rgba(0,0,0,.8);
+  transform:translate3d(0,-101%,0);
+  transition:transform var(--t-slow) var(--ease);
+  will-change:transform}
+body.chrome-on #hdr{transform:translate3d(0,0,0)}
 
-.bar{display:flex;align-items:center;gap:6px;padding:6px}
+/* No blur available (or disabled) — fall back to an opaque shelf */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  #hdr{background:#0e1014}
+}
 
-.feedpill{flex:1 1 auto;min-width:0;height:var(--h-md);padding:0 6px 0 8px;
-  border-radius:var(--r-md);gap:9px;justify-content:flex-start;
+/* ── Shelf head: always present ─────────────────────────────────────────── */
+
+.bar{display:flex;align-items:center;gap:4px;
+  padding:6px calc(var(--gut) - 4px) 6px calc(var(--gut) - 2px);
+  padding-left:calc(var(--gut) - 2px + var(--lft));
+  padding-right:calc(var(--gut) - 4px + var(--rgt))}
+
+.feedbtn{flex:1 1 auto;min-width:0;height:var(--h-md);padding:0 8px 0 6px;
+  border-radius:var(--r-md);gap:10px;justify-content:flex-start;
   color:var(--txt);transition:background var(--t-fast)}
-.feedpill:active{background:var(--s2)}
+.feedbtn:active{background:var(--s2)}
 .fico{flex:0 0 auto;width:30px;height:30px;border-radius:var(--r-sm);background:var(--s2);
-  display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--txt)}
+  display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--txt);
+  transition:background var(--t-fast),color var(--t-fast)}
 .fwrap{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
   align-items:flex-start;gap:1px;text-align:left}
-.fname{font-size:14.5px;font-weight:650;letter-spacing:-.01em;max-width:100%;
+.fname{font-size:15px;font-weight:650;letter-spacing:-.015em;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+.fmeta{font-size:11px;color:var(--dim-2);max-width:100%;line-height:1.25;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fmeta{font-size:11px;color:var(--dim-2);max-width:100%;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fchev{flex:0 0 auto;font-size:14px;color:var(--dim-2);margin-right:2px}
+.fchev{flex:0 0 auto;font-size:15px;color:var(--dim-2);
+  transition:transform var(--t-slow) var(--ease),color var(--t-fast)}
+body.pane-feeds .fchev{transform:rotate(180deg);color:var(--txt)}
+body.pane-feeds .fico{background:var(--s4)}
 
-.bar .ic{background:transparent}
-.bar .ic:active{background:var(--s2)}
-
+/* Sort row — collapses away while a panel is open, so the shelf never
+   shows two competing sets of controls at once. */
 .sorts{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;
-  padding:0 8px 8px;scroll-padding-inline:8px}
+  height:calc(var(--h-sm) + 10px);
+  padding:0 calc(var(--gut) - 2px + var(--rgt)) 10px calc(var(--gut) - 2px + var(--lft));
+  scroll-padding-inline:var(--gut);
+  opacity:1;transition:height var(--t-slow) var(--ease),
+    opacity var(--t-mid) var(--ease),padding var(--t-slow) var(--ease)}
 .sorts::-webkit-scrollbar{display:none}
-.sorts .sep{flex:0 0 auto;width:1px;align-self:stretch;margin:4px 4px;
+body.sheet-open .sorts{height:0;padding-top:0;padding-bottom:0;opacity:0;pointer-events:none}
+.sorts .sep{flex:0 0 auto;width:1px;align-self:stretch;margin:5px 3px;
   background:var(--line);border-radius:1px}
-.schip{flex:0 0 auto;height:var(--h-sm);padding:0 13px;border-radius:var(--r-pill);
+
+.schip{flex:0 0 auto;height:var(--h-sm);padding:0 12px;border-radius:var(--r-sm);
   background:var(--s2);color:var(--dim);font-size:12.5px;font-weight:600;
-  white-space:nowrap;
+  white-space:nowrap;letter-spacing:-.005em;
   transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
 .schip:active{transform:scale(.95)}
 .schip.on{background:var(--hi);color:var(--on-hi)}
 .schip.t{background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--dim-2)}
 .schip.t.on{background:var(--hi-soft);box-shadow:inset 0 0 0 1px var(--line-2);color:var(--txt)}
 
+/* Active chrome buttons name the panel they opened */
+body.pane-search #btnSearch,
+body.pane-settings #btnMore,
+body.pane-help #btnMore{background:var(--s3);color:var(--txt)}
+
+/* ── The panel region: the shelf getting taller ─────────────────────────── */
+
+.pane{position:relative;display:none;overflow:hidden;
+  height:var(--ph);
+  transition:height var(--t-slow) var(--ease)}
+.pane.mounted{display:block}
+.pane.drag{transition:none}
+
+.pane-in{padding-bottom:var(--grab-h);
+  opacity:0;transition:opacity var(--t-mid) var(--ease-out)}
+.pane.up .pane-in{opacity:1}
+
+/* Hairline where the head ends and the panel begins — the only seam, and
+   it only exists while a panel is actually open. */
+.pane.mounted::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:var(--line);opacity:0;transition:opacity var(--t-mid)}
+.pane.up::before{opacity:1}
+
+/* The grabber rides the bottom edge of the shelf as it opens and closes. */
+.grab{position:absolute;left:0;right:0;bottom:0;height:var(--grab-h);
+  display:flex;align-items:center;justify-content:center;
+  cursor:grab;touch-action:none}
+.grab i{width:34px;height:4px;border-radius:var(--r-pill);background:var(--line-2);
+  transition:background var(--t-fast),width var(--t-fast) var(--ease)}
+.pane.drag .grab i{background:var(--dim);width:44px}
+
+.phead{display:flex;align-items:center;gap:8px;touch-action:none;
+  padding:2px calc(var(--gut) - 2px + var(--rgt)) 10px calc(var(--gut) - 2px + var(--lft))}
+.phead h2{flex:1 1 auto;margin:0;font-size:16px;font-weight:680;letter-spacing:-.025em;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim)}
+.phead .back{flex:0 0 auto;width:var(--h-sm);height:var(--h-sm);border-radius:var(--r-sm);
+  background:var(--s2);color:var(--txt);font-size:16px}
+.phead .back:active{background:var(--s3)}
+.phead .sbtn{flex:0 0 auto;height:var(--h-sm);padding:0 12px;border-radius:var(--r-sm);
+  background:var(--s2);color:var(--txt);font-size:13px;font-weight:620;gap:6px;
+  transition:background var(--t-fast),transform var(--t-fast),opacity var(--t-fast)}
+.phead .sbtn svg.i{font-size:15px}
+.phead .sbtn.pri{background:var(--hi);color:var(--on-hi)}
+.phead .sbtn:active{transform:scale(.96);opacity:.85}
+
+.pbody{overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:0 calc(var(--gut) - 4px + var(--rgt)) 6px calc(var(--gut) - 4px + var(--lft));
+  touch-action:pan-y;scrollbar-width:none}
+.pbody::-webkit-scrollbar{display:none}
+.pbody.slide-l{animation:panelL var(--t-mid) var(--ease-out)}
+.pbody.slide-r{animation:panelR var(--t-mid) var(--ease-out)}
+@keyframes panelL{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes panelR{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+
+.pfoot{display:flex;gap:8px;border-top:1px solid var(--line);
+  padding:10px calc(var(--gut) - 4px + var(--rgt)) 10px calc(var(--gut) - 4px + var(--lft))}
+.pfoot button{flex:1;height:var(--h-md);border-radius:var(--r-md);background:var(--s2);
+  color:var(--txt);font-size:14px;font-weight:600;gap:7px;
+  transition:background var(--t-fast),transform var(--t-fast)}
+.pfoot button svg.i{font-size:17px}
+.pfoot button.pri{background:var(--hi);color:var(--on-hi)}
+.pfoot button.danger{flex:0 0 auto;width:var(--h-md);background:transparent;
+  box-shadow:inset 0 0 0 1px var(--line);color:var(--danger)}
+.pfoot button.danger:active{background:rgba(224,121,108,.1)}
+.pfoot button:active{transform:scale(.98)}
+.pfoot button[disabled]{opacity:.4;pointer-events:none}
+
+/* Post counter — only while the shelf is away */
 .count{position:fixed;z-index:59;
-  top:calc(var(--top) + var(--gut) + 6px);right:calc(var(--gut) + var(--rgt) + 6px);
-  font-size:11px;font-weight:600;color:rgba(255,255,255,.72);
-  background:rgba(0,0,0,.4);padding:3px 9px;border-radius:var(--r-pill);
+  top:calc(var(--top) + 10px);right:calc(var(--gut) + var(--rgt));
+  font-size:11px;font-weight:600;color:rgba(255,255,255,.7);
+  background:rgba(0,0,0,.42);padding:3px 8px;border-radius:var(--r-xs);
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   pointer-events:none;opacity:0;transition:opacity var(--t-mid)}
 body:not(.clear):not(.chrome-on) .count{opacity:1}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   SHEET — one surface, a stack of panels
-   ══════════════════════════════════════════════════════════════════════════ */
-
-.scrim{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+/* Scrim sits under the shelf, over everything else */
+.scrim{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
   opacity:0;pointer-events:none;transition:opacity var(--t-slow) var(--ease)}
 body.sheet-open .scrim{opacity:1;pointer-events:auto}
 
-.sheet{position:fixed;z-index:100;
-  left:calc(var(--gut) + var(--lft));right:calc(var(--gut) + var(--rgt));
-  bottom:0;
-  padding-bottom:calc(var(--gut) + var(--bot));
-  max-height:calc(100dvh - var(--top) - 24px);
-  display:none;flex-direction:column;
-  --sy:0px;
-  transform:translate3d(0,calc(100% + 24px),0);
-  transition:transform var(--t-slow) var(--ease);
-  will-change:transform;touch-action:none}
-.sheet.mounted{display:flex}
-.sheet.up{transform:translate3d(0,var(--sy),0)}
-.sheet.drag{transition:none}
+/* ══════════════════════════════════════════════════════════════════════════
+   PANEL CONTENT VOCABULARY
+   ══════════════════════════════════════════════════════════════════════════ */
 
-/* The visible card lives inside, so the safe-area pad isn't part of it */
-.scard{display:flex;flex-direction:column;min-height:0;
-  background:var(--s1);border:1px solid var(--line);border-radius:var(--r-xl);
-  box-shadow:0 -10px 50px rgba(0,0,0,.65);overflow:hidden;
-  -webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);
-  transition:height var(--t-mid) var(--ease)}
-
-.shandle{flex:0 0 auto;height:22px;display:flex;align-items:center;
-  justify-content:center;cursor:grab;touch-action:none}
-.shandle i{width:36px;height:4px;border-radius:var(--r-pill);background:var(--line-2)}
-
-.shead{flex:0 0 auto;display:flex;align-items:center;gap:8px;
-  padding:2px 10px 12px;touch-action:none}
-.shead h2{flex:1 1 auto;margin:0;font-size:17px;font-weight:680;letter-spacing:-.02em;
-  padding-left:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.shead .back{flex:0 0 auto;width:var(--h-sm);height:var(--h-sm);border-radius:var(--r-pill);
-  background:var(--s2);color:var(--txt);font-size:16px}
-.shead .back:active{background:var(--s3)}
-.shead .sbtn{flex:0 0 auto;height:var(--h-sm);padding:0 14px;border-radius:var(--r-pill);
-  background:var(--s2);color:var(--txt);font-size:13px;font-weight:600;gap:6px}
-.shead .sbtn svg.i{font-size:15px}
-.shead .sbtn.pri{background:var(--hi);color:var(--on-hi)}
-.shead .sbtn:active{transform:scale(.96);opacity:.85}
-
-.sbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;padding:0 10px calc(14px + var(--kb));
-  touch-action:pan-y;scrollbar-width:none}
-.sbody::-webkit-scrollbar{display:none}
-.sbody.slide-l{animation:panelL var(--t-mid) var(--ease-out)}
-.sbody.slide-r{animation:panelR var(--t-mid) var(--ease-out)}
-@keyframes panelL{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
-@keyframes panelR{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
-
-.sfoot{flex:0 0 auto;padding:10px;border-top:1px solid var(--line);display:flex;gap:8px}
-.sfoot button{flex:1;height:var(--h-lg);border-radius:var(--r-md);background:var(--s2);
-  color:var(--txt);font-size:14.5px;font-weight:600;gap:7px;
-  transition:background var(--t-fast),transform var(--t-fast)}
-.sfoot button svg.i{font-size:17px}
-.sfoot button.pri{background:var(--hi);color:var(--on-hi)}
-.sfoot button.danger{flex:0 0 auto;width:var(--h-lg);background:transparent;
-  box-shadow:inset 0 0 0 1px var(--line);color:var(--danger)}
-.sfoot button.danger:active{background:rgba(224,121,108,.1)}
-.sfoot button:active{transform:scale(.98)}
-.sfoot button[disabled]{opacity:.4;pointer-events:none}
-
-/* ── Sheet content vocabulary ─────────────────────────────────────────── */
-
-.slab{padding:16px 6px 8px;font-size:11px;font-weight:700;letter-spacing:.08em;
+.slab{padding:15px 4px 7px;font-size:10.5px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--dim-2);display:flex;align-items:center;gap:8px}
 .slab .sp{flex:1}
-.slab button{height:26px;padding:0 10px;border-radius:var(--r-pill);background:var(--s2);
+.slab button{height:26px;padding:0 10px;border-radius:var(--r-xs);background:var(--s2);
   font-size:11.5px;font-weight:650;color:var(--txt);letter-spacing:0;text-transform:none;gap:5px}
 .slab button svg.i{font-size:13px}
 .slab button:active{background:var(--s3)}
 
 .row{display:flex;align-items:center;gap:11px;width:100%;
-  padding:10px;border-radius:var(--r-md);background:var(--s2);
-  margin-bottom:6px;text-align:left;
+  padding:9px 10px;border-radius:var(--r-md);background:var(--s2);
+  margin-bottom:5px;text-align:left;
   transition:background var(--t-fast),box-shadow var(--t-fast)}
 .row:active{background:var(--s3)}
 .row.on{background:var(--hi-soft);box-shadow:inset 0 0 0 1px var(--line-2)}
-.row .rico{flex:0 0 auto;width:36px;height:36px;border-radius:var(--r-sm);background:var(--s3);
+.row .rico{flex:0 0 auto;width:34px;height:34px;border-radius:var(--r-sm);background:var(--s3);
   display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--txt)}
 .row .rico.txt{font-size:12.5px;font-weight:650;color:var(--dim)}
 .row.on .rico{background:var(--s4)}
@@ -442,21 +481,21 @@ body.sheet-open .scrim{opacity:1;pointer-events:auto}
 .row .rsub{font-size:11.5px;color:var(--dim-2);line-height:1.4;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .rsub.wrap{white-space:normal}
-.row .redit{flex:0 0 auto;width:var(--h-sm);height:var(--h-sm);border-radius:var(--r-pill);
+.row .redit{flex:0 0 auto;width:var(--h-sm);height:var(--h-sm);border-radius:var(--r-sm);
   color:var(--dim-2);font-size:16px;transition:background var(--t-fast),color var(--t-fast)}
 .row .redit:active{background:var(--s4);color:var(--txt)}
 .row .rord{flex:0 0 auto;display:flex;flex-direction:column;gap:2px}
-.row .rord button{width:28px;height:17px;border-radius:var(--r-sm);color:var(--dim-2);
+.row .rord button{width:28px;height:16px;border-radius:var(--r-xs);color:var(--dim-2);
   font-size:11px;background:var(--s3)}
 .row .rord button:active{color:var(--txt);background:var(--s4)}
 .row .rord button[disabled]{opacity:.25;pointer-events:none}
 
-.empty{padding:26px 18px 30px;text-align:center;color:var(--dim-2);
+.empty{padding:22px 16px 26px;text-align:center;color:var(--dim-2);
   font-size:13px;line-height:1.55}
 .empty b{display:block;color:var(--dim);font-size:14.5px;margin-bottom:5px;font-weight:600}
 
-.fld{display:block;padding:0 6px}
-.fld>span{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;
+.fld{display:block;padding:0 4px}
+.fld>span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--dim-2);margin-bottom:8px}
 .frow{display:flex;gap:8px;align-items:center}
 .inp{width:100%;height:var(--h-lg);border-radius:var(--r-md);border:1px solid var(--line);
@@ -470,32 +509,33 @@ body.sheet-open .scrim{opacity:1;pointer-events:auto}
   transition:background var(--t-fast)}
 .iconbtn:active{background:var(--s3)}
 
-.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 6px 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 4px 4px}
 .chip{display:inline-flex;align-items:center;gap:4px;height:var(--h-sm);
-  padding:0 4px 0 12px;border-radius:var(--r-pill);background:var(--s2);
+  padding:0 4px 0 11px;border-radius:var(--r-sm);background:var(--s2);
   font-size:13px;font-weight:550;max-width:100%}
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chip button{width:24px;height:24px;border-radius:var(--r-pill);color:var(--dim-2);
+.chip button{width:24px;height:24px;border-radius:var(--r-xs);color:var(--dim-2);
   font-size:13px;flex:0 0 auto}
 .chip button:active{background:var(--s4);color:var(--txt)}
 .chip.ghost{box-shadow:inset 0 0 0 1px var(--line);background:transparent;
-  color:var(--dim-2);padding:0 12px}
+  color:var(--dim-2);padding:0 11px}
 
 /* Icon grid */
-.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));
-  gap:7px;padding:2px 6px}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));
+  gap:6px;padding:2px 4px}
 .igrid button{aspect-ratio:1;width:100%;border-radius:var(--r-md);background:var(--s2);
-  color:var(--dim);font-size:22px;transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
+  color:var(--dim);font-size:21px;
+  transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast)}
 .igrid button:active{transform:scale(.93)}
 .igrid button.on{background:var(--hi);color:var(--on-hi)}
 
 /* Sticky search field inside a panel */
 .acfld{position:sticky;top:0;z-index:3;background:var(--s1);
-  padding:0 6px 8px;margin:0 -10px;padding-left:16px;padding-right:16px}
-.acfld::after{content:'';position:absolute;left:0;right:0;bottom:-14px;height:14px;
+  padding:0 4px 8px;margin:0 -4px;padding-left:8px;padding-right:8px}
+.acfld::after{content:'';position:absolute;left:0;right:0;bottom:-12px;height:12px;
   background:linear-gradient(var(--s1),transparent);pointer-events:none}
 
-.ac{margin:2px 6px 0;border-radius:var(--r-md);overflow:hidden;background:var(--s2)}
+.ac{margin:2px 4px 0;border-radius:var(--r-md);overflow:hidden;background:var(--s2)}
 .ac:empty{display:none}
 .acr{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;
   text-align:left;border-bottom:1px solid var(--line);justify-content:flex-start}
@@ -505,27 +545,27 @@ body.sheet-open .scrim{opacity:1;pointer-events:auto}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acr .am{flex:0 0 auto;font-size:11.5px;color:var(--dim-2)}
 .acr .a18{flex:0 0 auto;font-size:9.5px;font-weight:700;color:#e8a79d;
-  border:1px solid rgba(224,121,108,.4);border-radius:var(--r-sm);padding:1px 4px}
+  border:1px solid rgba(224,121,108,.4);border-radius:var(--r-xs);padding:1px 4px}
 
 /* Toggle row */
-.tg{display:flex;width:100%;align-items:center;gap:12px;padding:11px 10px;
-  border-radius:var(--r-md);background:var(--s2);margin-bottom:6px;text-align:left;
+.tg{display:flex;width:100%;align-items:center;gap:12px;padding:10px;
+  border-radius:var(--r-md);background:var(--s2);margin-bottom:5px;text-align:left;
   transition:background var(--t-fast)}
 .tg:active{background:var(--s3)}
 .tg .tmid{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
 .tg .tname{display:block;font-size:14.5px;font-weight:600}
 .tg .tsub{display:block;font-size:11.5px;color:var(--dim-2);line-height:1.45}
-.tg i{flex:0 0 auto;width:44px;height:27px;border-radius:var(--r-pill);background:var(--s4);
+.tg i{flex:0 0 auto;width:42px;height:26px;border-radius:var(--r-sm);background:var(--s4);
   position:relative;transition:background var(--t-mid) var(--ease)}
-.tg i::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;
-  border-radius:var(--r-pill);background:#8b9199;
+.tg i::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+  border-radius:var(--r-xs);background:#8b9199;
   transition:transform var(--t-mid) var(--ease),background var(--t-mid)}
 .tg[aria-checked="true"] i{background:var(--hi)}
-.tg[aria-checked="true"] i::after{transform:translateX(17px);background:var(--on-hi)}
+.tg[aria-checked="true"] i::after{transform:translateX(16px);background:var(--on-hi)}
 
-.note{padding:8px 8px 10px;font-size:12px;color:var(--dim-2);line-height:1.55}
+.note{padding:8px 6px 10px;font-size:12px;color:var(--dim-2);line-height:1.55}
 .note a{text-decoration:underline;text-underline-offset:2px;color:var(--dim)}
-.stat{padding:6px 8px;font-size:12px;color:var(--dim);min-height:18px;line-height:1.5}
+.stat{padding:6px;font-size:12px;color:var(--dim);min-height:18px;line-height:1.5}
 .stat.err{color:var(--danger)}
 .stat.ok{color:var(--txt)}
 
@@ -536,7 +576,7 @@ body.sheet-open .scrim{opacity:1;pointer-events:auto}
 .msg{display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;text-align:center;color:var(--dim);font-size:14px;padding:24px;
   max-width:420px;margin:0 auto;line-height:1.55}
-.msg h3{color:var(--txt);margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em}
+.msg h3{color:var(--txt);margin:0;font-size:18px;font-weight:650;letter-spacing:-.025em}
 .msg .mbtn{height:var(--h-lg);padding:0 22px;border-radius:var(--r-md);background:var(--s2);
   color:var(--txt);font-size:14.5px;font-weight:600}
 .msg .mbtn.pri{background:var(--hi);color:var(--on-hi)}
@@ -546,38 +586,40 @@ body.sheet-open .scrim{opacity:1;pointer-events:auto}
   border:2.5px solid var(--s3);border-top-color:var(--txt);animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-.toast{position:fixed;left:50%;bottom:calc(26px + var(--bot));
-  transform:translate(-50%,12px) scale(.96);
-  background:rgba(24,26,29,.96);border:1px solid var(--line-2);border-radius:var(--r-pill);
+/* The toast drops from the shelf too, so feedback never comes from a
+   direction nothing else uses. */
+.toast{position:fixed;left:50%;top:calc(var(--top) + 10px);
+  transform:translate(-50%,-16px) scale(.96);
+  background:rgba(26,29,34,.97);border:1px solid var(--line-2);border-radius:var(--r-md);
   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
-  padding:11px 20px;font-size:13.5px;font-weight:550;z-index:200;
+  padding:10px 16px;font-size:13.5px;font-weight:550;z-index:200;
   opacity:0;pointer-events:none;
-  transition:opacity var(--t-mid),transform var(--t-mid) var(--ease);
-  box-shadow:0 10px 34px rgba(0,0,0,.55);max-width:80vw;text-align:center}
+  transition:opacity var(--t-mid),transform var(--t-mid) var(--ease),top var(--t-slow) var(--ease);
+  box-shadow:0 12px 34px rgba(0,0,0,.6);max-width:min(88vw,420px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
-body.sheet-open .toast{bottom:calc(26px + var(--bot) + 8px)}
+/* Clear the shelf when it is on screen */
+body.chrome-on .toast{top:calc(var(--top) + var(--chrome-h) + var(--ph) + 10px)}
 
 /* ══════════════════════════════════════════════════════════════════════════
    LARGER SCREENS — not supported, but not punished either.
-   The whole UI simply stops growing and centres itself.
+   The shelf and the feed simply stop growing and centre themselves.
    ══════════════════════════════════════════════════════════════════════════ */
 
-@media (min-width:640px){
-  :root{--gut:14px}
-  #hdr{left:50%;right:auto;transform:translate(-50%,calc(-100% - var(--top) - var(--gut) - 12px));
-    width:min(520px,calc(100vw - var(--gut) * 2))}
-  body.chrome-on #hdr{transform:translate(-50%,0)}
-  .sheet{left:50%;right:auto;width:min(520px,calc(100vw - var(--gut) * 2));
-    transform:translate3d(-50%,calc(100% + 24px),0)}
-  .sheet.up{transform:translate3d(-50%,var(--sy),0)}
-  .count{right:calc(50% - min(260px,50vw - var(--gut)) + 6px)}
-  .info{padding-left:max(16px,calc(50vw - 260px))}
-  .rail-a{right:max(var(--rail-r),calc(50vw - 260px - var(--rail-w) - 4px))}
+@media (min-width:680px){
+  :root{--gut:18px}
+  #hdr{left:50%;transform:translate3d(-50%,-101%,0);
+    width:min(600px,100vw);border-radius:0 0 var(--r-xl) var(--r-xl);
+    border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  body.chrome-on #hdr{transform:translate3d(-50%,0,0)}
+  .count{right:calc(50% - min(320px,50vw) + var(--gut))}
+  .info{padding-left:max(var(--gut),calc(50vw - 300px))}
+  .rail-a{right:max(var(--rail-r),calc(50vw - 300px))}
   .trayup{right:max(calc(var(--rail-r) + (var(--rail-w) - var(--tray-sz)) / 2),
-    calc(50vw - 260px - var(--rail-w) + (var(--rail-w) - var(--tray-sz)) / 2))}
+    calc(50vw - 300px + (var(--rail-w) - var(--tray-sz)) / 2))}
 }
 
-@media (min-width:640px) and (pointer:fine){
-  .ic:hover,.btn:hover,.row:hover,.tg:hover,.acr:hover,.schip:hover{filter:brightness(1.14)}
-  .ract:hover{transform:scale(1.06)}
+@media (pointer:fine){
+  .ic:hover,.row:hover,.tg:hover,.acr:hover,.schip:hover,.feedbtn:hover{filter:brightness(1.16)}
+  .ract:hover,.tray-ch:hover{transform:scale(1.06)}
+  .pbody{scrollbar-width:thin;scrollbar-color:var(--s4) transparent}
 }

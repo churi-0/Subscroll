@@ -254,11 +254,64 @@ feed.addEventListener('scroll',()=>{
 },{passive:true});
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SHEET SYSTEM — one bottom sheet, stack of panels, swipe to dismiss
+// PANE SYSTEM — panels are the shelf getting taller
+// ───────────────────────────────────────────────────────────────────────────
+// There is no separate sheet any more. #sheet is a region *inside* the header,
+// so a panel opening is literally the same surface growing downward from the
+// top of the screen. One element, one material, one direction of travel.
+//
+// The only animated property is that region's height, published as --ph so
+// other chrome (the toast) can stay clear of it.
 // ═══════════════════════════════════════════════════════════════════════════
 
-let stack=[];
+const hdrHead = $('#hdrHead');
+let stack=[], paneH=0;
 const sheetOpen=()=>stack.length>0;
+
+// How tall the pane is allowed to get: whatever the viewport has left once
+// the shelf head, the safe area and the on-screen keyboard have taken theirs.
+function paneRoom(){
+  const vv=window.visualViewport;
+  const vh=(vv?vv.height:window.innerHeight);
+  const head=hdrHead.getBoundingClientRect().height;
+  return Math.max(180, vh - head - 28);
+}
+
+// Measure the panel at its natural size, then clamp the scrollable body so
+// the whole thing fits. Returns the height the pane should animate to.
+let measuring=false;
+function measurePane(){
+  measuring=true;
+  const room=paneRoom();
+  sheetBody.style.maxHeight='none';
+  const bodyNat=sheetBody.scrollHeight;
+  const nonBody=Math.max(0, sheetCard.offsetHeight - sheetBody.offsetHeight)
+              + parseFloat(getComputedStyle(sheetCard).paddingBottom||0)*0;
+  const maxBody=Math.max(96, room - nonBody);
+  sheetBody.style.maxHeight=maxBody+'px';
+  measuring=false;
+  return Math.round(Math.min(bodyNat, maxBody) + nonBody);
+}
+
+function setPaneH(px,publish){
+  if(paneH===px&&publish!==false) return;
+  paneH=px;
+  sheetEl.style.setProperty('--ph',px+'px');
+  if(publish!==false) document.documentElement.style.setProperty('--ph',px+'px');
+}
+
+// Re-measure and glide to the new height. Called after every render, and
+// whenever the viewport or keyboard changes the room available.
+function sizePane(){
+  if(!stack.length) return;
+  setPaneH(measurePane());
+}
+
+let sizeRaf=0;
+function queueSize(){
+  if(sizeRaf) return;
+  sizeRaf=requestAnimationFrame(()=>{ sizeRaf=0; sizePane(); });
+}
 
 function renderTop(dir){
   const top=stack[stack.length-1];
@@ -305,6 +358,12 @@ function renderTop(dir){
     sheetBody.classList.add(dir>0?'slide-l':'slide-r');
   }
   sheetBody.scrollTop=dir?0:(top.scroll||0);
+
+  // Name the open panel on <body> so chrome can react (chevron, etc).
+  [...document.body.classList].forEach(c=>{ if(c.indexOf('pane-')===0) document.body.classList.remove(c); });
+  document.body.classList.add('pane-'+top.name);
+
+  sizePane();
 }
 
 function refresh(){ if(stack.length){ stack[stack.length-1].scroll=sheetBody.scrollTop; renderTop(0); } }
@@ -313,12 +372,25 @@ function pushPanel(name,args){
   const first=!stack.length;
   if(!first) stack[stack.length-1].scroll=sheetBody.scrollTop;
   stack.push({name,args});
-  renderTop(first?0:1);
+
   if(first){
+    clearTimeout(closeT);
+    setChrome(true);                      // the shelf must be down to grow
     sheetEl.classList.add('mounted');
+    sheetEl.setAttribute('aria-hidden','false');
     document.body.classList.add('sheet-open');
-    setSheetY(0);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>sheetEl.classList.add('up')));
+    $('#feedPill').setAttribute('aria-expanded','true');
+    setPaneH(0);                          // start flush with the shelf head
+    renderTop(0);                         // measures and sets the target
+    const target=paneH;
+    setPaneH(0,false);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if(!stack.length) return;
+      setPaneH(target);
+      sheetEl.classList.add('up');
+    }));
+  }else{
+    renderTop(1);
   }
 }
 
@@ -332,8 +404,11 @@ function closeSheet(){
   if(!stack.length) return;
   stack=[];
   sheetEl.classList.remove('up','drag');
-  setSheetY(0);
+  sheetEl.setAttribute('aria-hidden','true');
   document.body.classList.remove('sheet-open');
+  [...document.body.classList].forEach(c=>{ if(c.indexOf('pane-')===0) document.body.classList.remove(c); });
+  $('#feedPill').setAttribute('aria-expanded','false');
+  setPaneH(0);
   const a=document.activeElement;
   if(a&&sheetEl.contains(a)) a.blur();
   pokeChrome();
@@ -342,20 +417,23 @@ function closeSheet(){
     if(stack.length) return;
     sheetEl.classList.remove('mounted');
     sheetBody.replaceChildren();      // don't keep a stale panel alive
+    sheetBody.style.maxHeight='';
     sheetFoot.replaceChildren();
     sheetFoot.hidden=true;
-  },420);
+  },460);
 }
 
 function openSheet(name,args){
   clearTimeout(closeT);
-  if(stack.length){ stack=[]; sheetBody.classList.remove('slide-l','slide-r'); }
+  if(stack.length){
+    stack=[];
+    sheetBody.classList.remove('slide-l','slide-r');
+  }
   pushPanel(name,args);
 }
 
-// The sheet's offset is a variable, so drag and rest share one transform
-// and there is never a competing inline style to fight the transition.
-function setSheetY(px){ sheetEl.style.setProperty('--sy', px+'px'); }
+// Kept for compatibility with anything that still nudges the pane directly.
+function setSheetY(px){ if(!px) sizePane(); }
 
 // With --kb driving the layout, the field only needs to be scrolled into
 // view inside the already-resized body.
@@ -363,6 +441,7 @@ function keepFieldVisible(inp){
   if(!inp) return;
   const run=()=>{
     if(!inp.isConnected) return;
+    sizePane();
     const r=inp.getBoundingClientRect(), b=sheetBody.getBoundingClientRect();
     const over=r.bottom+12-b.bottom;
     if(over>0) sheetBody.scrollBy({top:over,behavior:'smooth'});
@@ -372,36 +451,51 @@ function keepFieldVisible(inp){
   setTimeout(run,320);
 }
 
-// Sheet dismissal
+// Panels grow and shrink as their own content changes (autocomplete results,
+// chips wrapping to a new line). Watch, don't guess.
+if(window.ResizeObserver){
+  const ro=new ResizeObserver(()=>{
+    if(measuring||!stack.length||sheetEl.classList.contains('drag')) return;
+    queueSize();
+  });
+  ro.observe(sheetCard);
+}
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',queueSize);
+}
+addEventListener('resize',queueSize,{passive:true});
+
+// Dismissal
 sheetBack.onclick=e=>{ e.stopPropagation(); popPanel(); };
 scrimEl.onclick=()=>closeSheet();
 sheetEl.addEventListener('click',e=>e.stopPropagation());
 
-/* ── Swipe to dismiss ──────────────────────────────────────────────────────
-   Drag from the handle or header, and from the body when it is scrolled to
-   the top. Rubber-bands upward, tracks 1:1 downward, and decides on release
-   using velocity first, distance second — so a quick flick closes even a
-   tall sheet, while a slow drag has to clear a third of its height. */
+/* ── Drag to retract ───────────────────────────────────────────────────────
+   The pane hangs from the top, so it is dismissed by pushing it back up.
+   Grab the bar at its bottom edge (or the panel's title row) and drag: the
+   pane tracks 1:1 upward, rubber-bands downward, and on release decides with
+   velocity first and distance second — a quick flick retracts even a tall
+   panel, a slow drag has to clear a third of it. */
 (()=>{
   const grip=$('#sheetHandle');
-  let id=null,y0=0,dy=0,live=false,fromBody=false,t0=0,lastY=0,lastT=0,vel=0;
+  let id=null,y0=0,dy=0,live=false,h0=0,lastY=0,lastT=0,vel=0;
 
   const start=e=>{
     if(e.pointerType==='mouse'&&e.button!==0) return;
-    if(id!==null) return;
+    if(id!==null||!stack.length) return;
     if(e.target.closest('button,input,select,textarea,a')) return;
-    fromBody=sheetBody.contains(e.target);
-    if(fromBody&&sheetBody.scrollTop>0) return;
-    id=e.pointerId; y0=lastY=e.clientY; dy=0; vel=0;
-    t0=lastT=e.timeStamp; live=!fromBody;   // body drags arm on first move
-    if(live) sheetEl.classList.add('drag');
+    const inBody=sheetBody.contains(e.target);
+    // The body owns vertical drags whenever it can actually scroll.
+    if(inBody&&sheetBody.scrollHeight>sheetBody.clientHeight+2) return;
+    id=e.pointerId; y0=lastY=e.clientY; dy=0; vel=0; lastT=e.timeStamp;
+    h0=paneH; live=false;
   };
 
   const move=e=>{
     if(e.pointerId!==id) return;
     const raw=e.clientY-y0;
     if(!live){
-      if(raw<4) { if(raw<-4){ id=null; } return; }   // let the body scroll
+      if(Math.abs(raw)<4) return;
       live=true; y0=e.clientY;
       sheetEl.classList.add('drag');
       try{ sheetEl.setPointerCapture(id); }catch(_){}
@@ -409,23 +503,22 @@ sheetEl.addEventListener('click',e=>e.stopPropagation());
     const d=e.clientY-y0;
     const dt=e.timeStamp-lastT;
     if(dt>0){ vel=(e.clientY-lastY)/dt; lastY=e.clientY; lastT=e.timeStamp; }
-    dy = d>0 ? d : -Math.pow(-d,.55)*1.6;   // resist upward
+    dy = d<0 ? d : Math.pow(d,.55)*1.6;     // resist pulling further down
     if(e.cancelable) e.preventDefault();
-    setSheetY(dy);
+    setPaneH(Math.max(0,h0+dy));
   };
 
   const end=e=>{
     if(e.pointerId!==id) return;
     try{ sheetEl.releasePointerCapture(id); }catch(_){}
     const wasLive=live;
-    id=null; live=false; fromBody=false;
+    id=null; live=false;
     if(!wasLive) return;
     sheetEl.classList.remove('drag');
-    const h=sheetEl.getBoundingClientRect().height||1;
-    const flick=vel>0.55;
-    const far=dy>h*0.33;
-    if(flick||far){ closeSheet(); }
-    else setSheetY(0);
+    const flick = vel < -0.55;
+    const far   = dy < -h0*0.33;
+    if(flick||far) closeSheet();
+    else sizePane();
     dy=0; vel=0;
   };
 
@@ -434,6 +527,7 @@ sheetEl.addEventListener('click',e=>e.stopPropagation());
   sheetEl.addEventListener('pointerup',end);
   sheetEl.addEventListener('pointercancel',end);
   grip.addEventListener('dragstart',e=>e.preventDefault());
+  grip.addEventListener('click',()=>{ if(!sheetEl.classList.contains('drag')) closeSheet(); });
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -537,20 +631,25 @@ setIcon($('#sheetBack'),'left');
 setIcon($('#clearX'),'up');
 setIcon($('.account-mark'),'sparkle');
 
-// Publish the header's real height so the gallery dots can duck under it
+// Publish the shelf head's real height so the gallery dots can duck under it
 (()=>{
   const sync=()=>{
-    const h=hdrEl.getBoundingClientRect().height;
+    const h=hdrHead.getBoundingClientRect().height;
     if(h) document.documentElement.style.setProperty('--chrome-h',Math.round(h+8)+'px');
   };
-  if(window.ResizeObserver) new ResizeObserver(sync).observe(hdrEl);
+  if(window.ResizeObserver) new ResizeObserver(sync).observe(hdrHead);
   sync();
 })();
 
-// Header buttons
-$('#feedPill').onclick =()=>openSheet('feeds');
-$('#btnSearch').onclick=()=>openSheet('search',{});
-$('#btnMore').onclick  =()=>openSheet('settings');
+// Header buttons — each one toggles its own panel, so the control that
+// opened the shelf is also the control that puts it away.
+function togglePanel(name,args){
+  if(stack.length===1&&stack[0].name===name) return closeSheet();
+  openSheet(name,args);
+}
+$('#feedPill').onclick =()=>togglePanel('feeds');
+$('#btnSearch').onclick=()=>togglePanel('search',{});
+$('#btnMore').onclick  =()=>togglePanel('settings');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // KEYBOARD & WINDOW EVENTS
@@ -578,8 +677,8 @@ addEventListener('keydown',e=>{
       break;
     case 'i': case 'c': toggleClear(); break;
     case 'h': toggleChrome(); break;
-    case 'g': openSheet('feeds'); break;
-    case '/': e.preventDefault(); openSheet('search',{}); break;
+    case 'g': togglePanel('feeds'); break;
+    case '/': e.preventDefault(); togglePanel('search',{}); break;
     case 'f': if(activeSec&&activeSec._post) toggleFav(activeSec._post.subreddit); break;
     case 'm': S.muted=!S.muted; save(); applyMute(); toast(S.muted?'Muted':'Sound on'); break;
     case 'p': togglePlay(); break;
