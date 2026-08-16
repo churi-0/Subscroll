@@ -1,12 +1,12 @@
 "use strict";
 
-/* ══════════════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════════════
    ACCOUNT — password-only Cloudflare session + cloud state sync
-   ──────────────────────────────────────────────────────────────────────────
+   ────────────────────────────────────────────────────────────────────────
    The password is the account identifier. The server turns it into an opaque
    HMAC account id and returns an HttpOnly session cookie. App data is stored
    in D1; nothing is persisted in localStorage after the one-time migration.
-   ══════════════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════════════════════════ */
 
 const Account=(()=>{
   const gate=$('#accountGate'), form=$('#loginForm'), input=$('#accountPassword'),
@@ -91,8 +91,8 @@ const Account=(()=>{
   form.addEventListener('submit',async e=>{
     e.preventDefault();
     const password=input.value;
-    if(password.length<8){
-      status.textContent='Use at least 8 characters.';
+    if(password.length<4){
+      status.textContent='Use at least 4 characters.';
       status.classList.add('err');
       return;
     }
