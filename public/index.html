@@ -18,9 +18,9 @@
 <meta name="theme-color" content="#060709">
 <meta name="color-scheme" content="dark">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23060709'/%3E%3Ccircle cx='90' cy='90' r='50' fill='%23white'/%3E%3C/svg%3E">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060709'/%3E%3Ccircle cx='32' cy='32' r='16' fill='%23white'/%3E%3C/svg%3E">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22SubScroll%22%2C%22short_name%22%3A%22SubScroll%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%7D">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23060709'/%3E%3Ccircle cx='90' cy='90' r='45' fill='none' stroke='%23fff' stroke-width='4'/%3E%3Cpath d='M90 60v60M60 90h60' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060709'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Cpath d='M32 20v24M20 32h24' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22SubScroll%22%2C%22short_name%22%3A%22SubScroll%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%2C%22scope%22%3A%22/%22%2C%22start_url%22%3A%22/index.html%22%2C%22theme_color%22%3A%22%23060709%22%2C%22background_color%22%3A%22%23060709%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%252C%253Csvg%2520xmlns%253D%2527http%253A%2F%2Fwww.w3.org%2F2000%2Fsvg%2527%2520viewBox%253D%27270%2720%2720%27%253E%253Crect%2520width%253D%2527120%2527%2520height%253D%2527120%2527%2520rx%253D%252728%2527%2520fill%253D%2527%252306070 9%2527%2F%253E%253Ccircle%2520cx%253D%2527120%2527%2520cy%253D%2527120%2527%2520r%253D%2527280%2527%2520fill%253D%2527none%2527%2520stroke%253D%2527%2523fff%2527%2520stroke-width%253D%2527100%2527%2F%253E%253Cpath%2520d%253D%2527M120%2520600v480M600%2520120h480%2527%2520stroke%253D%2527%2523fff%2527%2520stroke-width%253D%2527100%2527%2520stroke-linecap%253D%2527round%2527%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%22%7D%5D%7D">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="account-locked">
@@ -33,7 +33,7 @@
     <form id="loginForm" hidden>
       <label for="accountPassword">Account password</label>
       <div class="account-field">
-        <input id="accountPassword" type="password" minlength="8" maxlength="256"
+        <input id="accountPassword" type="password" minlength="4" maxlength="256"
           autocomplete="current-password" required autofocus placeholder="Enter your password">
         <button id="loginSubmit" type="submit">Continue</button>
       </div>
