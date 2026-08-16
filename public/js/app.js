@@ -260,7 +260,7 @@ feed.addEventListener('scroll',()=>{
 let stack=[];
 const sheetOpen=()=>stack.length>0;
 
-function renderTop(){
+function renderTop(dir){
   const top=stack[stack.length-1];
   if(!top) return;
   const spec=PANELS[top.name](top.args||{});
@@ -270,14 +270,15 @@ function renderTop(){
 
   if(spec.action){
     sheetAction.hidden=false;
-    sheetAction.textContent=spec.action.label;
+    sheetAction.innerHTML=(spec.action.icon?icon(spec.action.icon,15):'')+
+      (spec.action.label?'<span>'+esc(spec.action.label)+'</span>':'');
     sheetAction.className='sbtn'+(spec.action.pri?' pri':'');
     sheetAction.onclick=e=>{ e.stopPropagation(); spec.action.run(); };
   }else sheetAction.hidden=true;
 
-  sheetBody.innerHTML='';
-  spec.body(sheetBody);
-  sheetBody.scrollTop=top.scroll||0;
+  const panel=document.createElement('div');
+  panel.className='panel'+(dir==='fwd'?' from-r':'');
+  spec.body(panel);
 
   sheetFoot.innerHTML='';
   if(spec.foot&&spec.foot.length){
@@ -292,6 +293,26 @@ function renderTop(){
       sheetFoot.appendChild(btn);
     });
   }else sheetFoot.hidden=true;
+
+  const prev=sheetBody.firstElementChild;
+  sheetBody.appendChild(panel);
+  sheetBody.scrollTop=top.scroll||0;
+
+  if(prev){
+    if(dir){
+      // Slide the outgoing panel away, the new one in.
+      prev.classList.add(dir==='fwd'?'to-l':'to-r');
+      const done=()=>prev.remove();
+      prev.addEventListener('transitionend',done,{once:true});
+      setTimeout(done,360);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('show')));
+    }else{
+      prev.remove();
+      panel.classList.add('show');
+    }
+  }else{
+    panel.classList.add('show');
+  }
 }
 
 function refresh(){ if(stack.length){ stack[stack.length-1].scroll=sheetBody.scrollTop; renderTop(); } }
@@ -299,7 +320,7 @@ function refresh(){ if(stack.length){ stack[stack.length-1].scroll=sheetBody.scr
 function pushPanel(name,args){
   if(stack.length) stack[stack.length-1].scroll=sheetBody.scrollTop;
   stack.push({name,args});
-  renderTop();
+  renderTop(stack.length>1?'fwd':undefined);
   if(stack.length===1){
     sheetEl.classList.add('mounted');
     document.body.classList.add('sheet-open');
@@ -309,7 +330,7 @@ function pushPanel(name,args){
 
 function popPanel(){
   if(stack.length<=1) return closeSheet();
-  stack.pop(); renderTop();
+  stack.pop(); renderTop('back');
 }
 
 function closeSheet(){
@@ -344,19 +365,24 @@ sheetBack.onclick=e=>{ e.stopPropagation(); popPanel(); };
 scrimEl.onclick=()=>closeSheet();
 sheetEl.addEventListener('click',e=>e.stopPropagation());
 
-// Swipe down to dismiss
+// Swipe down to dismiss — velocity-aware, threshold relative to sheet height
 (()=>{
   const grip=$('#sheetHandle'), head=sheetEl.querySelector('.shead');
-  let id=null,y0=0,dy=0,live=false;
+  let id=null,y0=0,dy=0,vy=0,lastY=0,lastT=0,live=false;
   const start=e=>{
     if(e.pointerType==='mouse'&&e.button!==0) return;
-    if(e.target.closest('button,input')) return;
-    id=e.pointerId; y0=e.clientY; dy=0; live=true;
+    if(e.target.closest('button,input,a')) return;
+    id=e.pointerId; y0=e.clientY; dy=0; vy=0;
+    lastY=e.clientY; lastT=performance.now(); live=true;
     sheetEl.classList.add('drag');
     try{ sheetEl.setPointerCapture(id); }catch(_){}
   };
   const move=e=>{
     if(e.pointerId!==id||!live) return;
+    const now=performance.now();
+    const dt=Math.max(1,now-lastT);
+    vy=vy*0.7+((e.clientY-lastY)/dt)*0.3;      // px/ms, smoothed
+    lastY=e.clientY; lastT=now;
     dy=Math.max(0,e.clientY-y0);
     e.preventDefault();
     sheetEl.style.transform=`translateY(${dy}px)`;
@@ -366,8 +392,10 @@ sheetEl.addEventListener('click',e=>e.stopPropagation());
     try{ sheetEl.releasePointerCapture(id); }catch(_){}
     sheetEl.classList.remove('drag');
     sheetEl.style.transform='';
-    if(dy>90) closeSheet();
-    id=null; live=false; dy=0;
+    const h=sheetEl.offsetHeight;
+    const shouldClose=dy>96||dy>h*0.2||(vy>0.5&&dy>48);
+    if(shouldClose) closeSheet();
+    id=null; live=false; dy=0; vy=0;
   };
   [grip,head].forEach(el=>{
     el.addEventListener('pointerdown',start);
@@ -405,7 +433,7 @@ function paintSorts(){
   });
   if(g.sort==='top'||g.sort==='controversial'){
     const sep=document.createElement('span');
-    sep.style.cssText='flex:0 0 auto;width:1px;background:var(--line);margin:5px 3px';
+    sep.className='sep';
     sortsEl.appendChild(sep);
     TIMES.forEach(([v,l])=>{
       const b=document.createElement('button');
@@ -431,7 +459,7 @@ function openSingle(name){
     sort:active().sort,time:active().time});
   S.activeId=TMP;
   paintHeader(); load(true);
-  toast(isFav(name)?('r/'+name):('r/'+name+' \u2014 tap \u2606 to favourite'));
+  toast(isFav(name)?('r/'+name):('r/'+name+' \u2014 tap the star to favourite'));
 }
 
 function openMulti(list){
